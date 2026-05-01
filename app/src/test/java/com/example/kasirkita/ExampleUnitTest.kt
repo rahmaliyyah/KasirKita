@@ -1,4 +1,4 @@
-package com.example.KasirKita
+package com.example.kasirkita
 
 import org.junit.Test
 

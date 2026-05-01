@@ -1,4 +1,4 @@
-package com.example.KasirKita.data
+package com.example.kasirkita.data
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth
 

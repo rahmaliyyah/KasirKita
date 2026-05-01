@@ -1,4 +1,4 @@
-package com.example.KasirKita.ui.theme
+package com.example.kasirkita.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

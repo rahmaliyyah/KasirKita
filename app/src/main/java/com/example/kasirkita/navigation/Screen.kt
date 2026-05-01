@@ -1,4 +1,4 @@
-package com.example.KasirKita.navigation
+package com.example.kasirkita.navigation
 
 /*
  * Sealed class juga bisa digunakan untuk route navigasi.
@@ -20,4 +20,7 @@ sealed class Screen(val route: String) {
      * Route untuk halaman dashboard.
      */
     object Dashboard : Screen("dashboard")
+    object OwnerDashboard : Screen("owner_dashboard")
+    object KasirDashboard : Screen("kasir_dashboard")
 }
+

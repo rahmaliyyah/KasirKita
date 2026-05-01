@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.KasirKita"
+    namespace = "com.example.kasirkita"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -13,7 +13,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.KasirKita"
+        applicationId = "com.example.kasirkita"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -75,5 +75,6 @@ dependencies {
     // Ktor Android Client
     implementation("io.ktor:ktor-client-android:3.0.3")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
 
 }

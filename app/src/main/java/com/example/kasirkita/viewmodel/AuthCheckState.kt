@@ -1,4 +1,4 @@
-package com.example.KasirKita.viewmodel
+package com.example.kasirkita.viewmodel
 
 sealed class AuthCheckState {
     object Checking : AuthCheckState()

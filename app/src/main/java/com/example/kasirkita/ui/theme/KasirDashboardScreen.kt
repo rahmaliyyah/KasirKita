@@ -1,4 +1,5 @@
-package com.example.KasirKita.ui.theme
+package com.example.kasirkita.ui.theme
+
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -8,12 +9,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun DashboardScreen(
+fun KasirDashboardScreen(
     onLogoutClick: () -> Unit
 ) {
-    /*
-     * Dashboard sederhana yang muncul setelah user berhasil login.
-     */
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -21,23 +19,11 @@ fun DashboardScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-
-        Text(
-            text = "Dashboard",
-            style = MaterialTheme.typography.headlineMedium
-        )
-
+        Text(text = "Dashboard Kasir", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "Anda berhasil login ke aplikasi."
-        )
-
+        Text(text = "Selamat datang, Kasir!")
         Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onLogoutClick
-        ) {
+        Button(onClick = onLogoutClick) {
             Text("Logout")
         }
     }

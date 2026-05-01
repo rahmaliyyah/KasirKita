@@ -1,10 +1,10 @@
-package com.example.KasirKita
+package com.example.kasirkita
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.example.KasirKita.ui.theme.ModulSupabaseAuthPAMTTheme
-import com.example.KasirKita.navigation.AppNavigation
+import com.example.kasirkita.ui.theme.ModulSupabaseAuthPAMTTheme
+import com.example.kasirkita.navigation.AppNavigation
 
 class MainActivity : ComponentActivity() {
 
