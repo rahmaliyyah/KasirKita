@@ -82,7 +82,6 @@ fun LoginScreen(
             onClick = onNavigateToRegister,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Belum punya akun? Register")
         }
 
         /*

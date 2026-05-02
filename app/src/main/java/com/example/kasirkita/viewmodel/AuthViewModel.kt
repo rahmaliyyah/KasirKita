@@ -24,11 +24,12 @@ class AuthViewModel : ViewModel() {
     private val _password = MutableStateFlow("")
     val password: StateFlow<String> = _password
 
-    // State baru untuk role
     private val _userRole = MutableStateFlow<String?>(null)
     val userRole: StateFlow<String?> = _userRole
 
-    // State untuk form tambah kasir
+    private val _isRoleLoaded = MutableStateFlow(false)
+    val isRoleLoaded: StateFlow<Boolean> = _isRoleLoaded
+
     private val _kasirEmail = MutableStateFlow("")
     val kasirEmail: StateFlow<String> = _kasirEmail
 
@@ -47,7 +48,6 @@ class AuthViewModel : ViewModel() {
             repository.sessionStatus.collect { status ->
                 _authCheckState.value = when (status) {
                     is SessionStatus.Authenticated -> {
-                        // Ambil role setelah authenticated
                         fetchUserRole()
                         AuthCheckState.Authenticated
                     }
@@ -65,9 +65,15 @@ class AuthViewModel : ViewModel() {
     private fun fetchUserRole() {
         viewModelScope.launch {
             try {
-                _userRole.value = repository.getUserRole()
+                _isRoleLoaded.value = false
+                val role = repository.getUserRole()
+                android.util.Log.d("AUTH_DEBUG", "Role fetched: '$role'")
+                _userRole.value = role
             } catch (e: Exception) {
+                android.util.Log.e("AUTH_DEBUG", "Error fetch role: ${e.message}")
                 _userRole.value = null
+            } finally {
+                _isRoleLoaded.value = true
             }
         }
     }
@@ -100,7 +106,6 @@ class AuthViewModel : ViewModel() {
                     name = _kasirName.value
                 )
                 _uiState.value = AuthUiState.Success
-                // Reset form
                 _kasirEmail.value = ""
                 _kasirPassword.value = ""
                 _kasirName.value = ""
@@ -114,6 +119,7 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             repository.logout()
             _userRole.value = null
+            _isRoleLoaded.value = false
             _uiState.value = AuthUiState.Idle
         }
     }
