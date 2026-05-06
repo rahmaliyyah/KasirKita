@@ -25,7 +25,6 @@ fun AppNavigation(
 ) {
     val authCheckState = authViewModel.authCheckState.collectAsStateWithLifecycle()
     val userRole = authViewModel.userRole.collectAsStateWithLifecycle()
-    val isRoleLoaded = authViewModel.isRoleLoaded.collectAsStateWithLifecycle()
 
     when (authCheckState.value) {
         is AuthCheckState.Checking -> {
@@ -34,8 +33,8 @@ fun AppNavigation(
             }
         }
         is AuthCheckState.Authenticated -> {
-            // Tunggu sampai role selesai di-fetch
-            if (!isRoleLoaded.value) {
+            // Tunggu role selesai di-fetch
+            if (userRole.value == null) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
@@ -67,10 +66,9 @@ fun MainNavHost(
     val kasirPassword = authViewModel.kasirPassword.collectAsStateWithLifecycle()
     val kasirName = authViewModel.kasirName.collectAsStateWithLifecycle()
     val userRole = authViewModel.userRole.collectAsStateWithLifecycle()
-    val isRoleLoaded = authViewModel.isRoleLoaded.collectAsStateWithLifecycle()
 
-    LaunchedEffect(uiState.value, isRoleLoaded.value) {
-        if (uiState.value is AuthUiState.Success && isRoleLoaded.value) {
+    LaunchedEffect(uiState.value) {
+        if (uiState.value is AuthUiState.Success) {
             val destination = if (userRole.value == "owner") {
                 Screen.OwnerDashboard.route
             } else {
@@ -92,7 +90,7 @@ fun MainNavHost(
                 onEmailChange = authViewModel::onEmailChange,
                 onPasswordChange = authViewModel::onPasswordChange,
                 onLoginClick = { authViewModel.login() },
-                onNavigateToRegister = {}
+                onNavigateToRegister = {} // dikosongkan, kasir tidak bisa register sendiri
             )
         }
 
@@ -127,3 +125,4 @@ fun MainNavHost(
         }
     }
 }
+
