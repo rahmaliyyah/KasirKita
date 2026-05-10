@@ -22,5 +22,10 @@ sealed class Screen(val route: String) {
     object Dashboard : Screen("dashboard")
     object OwnerDashboard : Screen("owner_dashboard")
     object KasirDashboard : Screen("kasir_dashboard")
+
+    //kas
+    object KasList : Screen("kas_list")
+    object KasDetail : Screen("kas_detail")
+
 }
 

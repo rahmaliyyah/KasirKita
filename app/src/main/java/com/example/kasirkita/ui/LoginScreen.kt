@@ -1,4 +1,4 @@
-package com.example.kasirkita.ui.theme
+package com.example.kasirkita.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*

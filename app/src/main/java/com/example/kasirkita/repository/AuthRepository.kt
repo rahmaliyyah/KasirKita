@@ -1,15 +1,15 @@
 package com.example.kasirkita.repository
 
-import kotlinx.serialization.json.buildJsonObject
-import org.slf4j.MDC.put
 import com.example.kasirkita.data.SupabaseClientProvider
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
+import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
-import java.util.Locale.filter
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 @Serializable
 data class UserProfile(
@@ -76,5 +76,6 @@ class AuthRepository {
                 put("role", "cashier")
             }
         }
+        supabase.auth.signOut()
     }
 }
