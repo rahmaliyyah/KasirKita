@@ -78,12 +78,6 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        TextButton(
-            onClick = onNavigateToRegister,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Belum punya akun? Register")
-        }
 
         /*
          * Jika state Error, tampilkan pesan error.
