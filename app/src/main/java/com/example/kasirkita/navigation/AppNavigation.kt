@@ -12,12 +12,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.kasirkita.ui.theme.KasirDashboardScreen
-import com.example.kasirkita.ui.theme.LoginScreen
-import com.example.kasirkita.ui.theme.OwnerDashboardScreen
+import com.example.kasirkita.ui.KasirDashboardScreen
+import com.example.kasirkita.ui.LoginScreen
+import com.example.kasirkita.ui.OwnerDashboardScreen
+import com.example.kasirkita.ui.kas.KasDetailScreen
+import com.example.kasirkita.ui.kas.KasListScreen
 import com.example.kasirkita.viewmodel.AuthCheckState
 import com.example.kasirkita.viewmodel.AuthUiState
 import com.example.kasirkita.viewmodel.AuthViewModel
+import com.example.kasirkita.viewmodel.KasViewModel
 
 @Composable
 fun AppNavigation(
@@ -25,7 +28,7 @@ fun AppNavigation(
 ) {
     val authCheckState = authViewModel.authCheckState.collectAsStateWithLifecycle()
     val userRole = authViewModel.userRole.collectAsStateWithLifecycle()
-    val isRoleLoaded = authViewModel.isRoleLoaded.collectAsStateWithLifecycle()
+    val isRoleLoaded = authViewModel.isRoleLoaded.collectAsStateWithLifecycle() // ← BARU
 
     when (authCheckState.value) {
         is AuthCheckState.Checking -> {
@@ -34,8 +37,7 @@ fun AppNavigation(
             }
         }
         is AuthCheckState.Authenticated -> {
-            // Tunggu sampai role selesai di-fetch
-            if (!isRoleLoaded.value) {
+            if (!isRoleLoaded.value) { // ← GANTI dari userRole.value == null
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
@@ -68,6 +70,7 @@ fun MainNavHost(
     val kasirName = authViewModel.kasirName.collectAsStateWithLifecycle()
     val userRole = authViewModel.userRole.collectAsStateWithLifecycle()
     val isRoleLoaded = authViewModel.isRoleLoaded.collectAsStateWithLifecycle()
+    val kasViewModel: KasViewModel = viewModel()
 
     LaunchedEffect(uiState.value, isRoleLoaded.value) {
         if (uiState.value is AuthUiState.Success && isRoleLoaded.value) {
@@ -111,6 +114,9 @@ fun MainNavHost(
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.OwnerDashboard.route) { inclusive = true }
                     }
+                },
+                onKelolaKasClick = {
+                    navController.navigate(Screen.KasList.route)
                 }
             )
         }
@@ -122,7 +128,30 @@ fun MainNavHost(
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.KasirDashboard.route) { inclusive = true }
                     }
+                },
+                onKelolaKasClick = {
+                    navController.navigate(Screen.KasList.route)
                 }
+            )
+        }
+
+        composable(Screen.KasList.route) {
+            KasListScreen(
+                kasViewModel = kasViewModel,
+                isOwner = userRole.value == "owner",
+                onKasClick = { kas ->
+                    kasViewModel.selectKas(kas)
+                    navController.navigate(Screen.KasDetail.route)
+                },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.KasDetail.route) {
+            KasDetailScreen(
+                kasViewModel = kasViewModel,
+                isOwner = userRole.value == "owner",
+                onBackClick = { navController.popBackStack() }
             )
         }
     }

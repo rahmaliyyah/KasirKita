@@ -1,4 +1,4 @@
-package com.example.kasirkita.ui.theme
+package com.example.kasirkita.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -19,7 +19,8 @@ fun OwnerDashboardScreen(
     onKasirEmailChange: (String) -> Unit,
     onKasirPasswordChange: (String) -> Unit,
     onTambahKasirClick: () -> Unit,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    onKelolaKasClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -94,6 +95,10 @@ fun OwnerDashboardScreen(
         }
 
         Spacer(modifier = Modifier.weight(1f))
+
+        Button(onClick = onKelolaKasClick){
+            Text("Kelola Kas")
+        }
 
         Button(
             onClick = onLogoutClick,

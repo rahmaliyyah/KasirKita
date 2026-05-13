@@ -1,4 +1,4 @@
-package com.example.kasirkita.ui.theme
+package com.example.kasirkita.ui
 
 
 import androidx.compose.foundation.layout.*
@@ -10,7 +10,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun KasirDashboardScreen(
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    onKelolaKasClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -25,6 +26,9 @@ fun KasirDashboardScreen(
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = onLogoutClick) {
             Text("Logout")
+        }
+        Button(onClick = onKelolaKasClick) {
+            Text("Kelola Kas")
         }
     }
 }

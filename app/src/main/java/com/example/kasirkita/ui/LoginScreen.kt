@@ -1,4 +1,4 @@
-package com.example.kasirkita.ui.theme
+package com.example.kasirkita.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -8,16 +8,22 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.kasirkita.viewmodel.AuthUiState
 
+
 @Composable
-fun RegisterScreen(
+fun LoginScreen(
     email: String,
     password: String,
     uiState: AuthUiState,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
-    onRegisterClick: () -> Unit,
-    onNavigateToLogin: () -> Unit
+    onLoginClick: () -> Unit,
+    onNavigateToRegister: () -> Unit
 ) {
+    /*
+     * LoginScreen tidak menyimpan state email/password sendiri.
+     * State dikirim dari luar, yaitu dari ViewModel.
+     * Inilah konsep state hoisting.
+     */
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -26,7 +32,7 @@ fun RegisterScreen(
     ) {
 
         Text(
-            text = "Register",
+            text = "Login",
             style = MaterialTheme.typography.headlineMedium
         )
 
@@ -56,7 +62,7 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = onRegisterClick,
+            onClick = onLoginClick,
             modifier = Modifier.fillMaxWidth(),
             enabled = uiState !is AuthUiState.Loading
         ) {
@@ -66,19 +72,16 @@ fun RegisterScreen(
                     strokeWidth = 2.dp
                 )
             } else {
-                Text("Register")
+                Text("Login")
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        TextButton(
-            onClick = onNavigateToLogin,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Sudah punya akun? Login")
-        }
 
+        /*
+         * Jika state Error, tampilkan pesan error.
+         */
         if (uiState is AuthUiState.Error) {
             Spacer(modifier = Modifier.height(12.dp))
 
