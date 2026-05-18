@@ -15,12 +15,18 @@ import androidx.navigation.compose.rememberNavController
 import com.example.kasirkita.ui.KasirDashboardScreen
 import com.example.kasirkita.ui.LoginScreen
 import com.example.kasirkita.ui.OwnerDashboardScreen
+import com.example.kasirkita.ui.customer.CustomerDetailScreen
+import com.example.kasirkita.ui.customer.CustomerListScreen
 import com.example.kasirkita.ui.kas.KasDetailScreen
 import com.example.kasirkita.ui.kas.KasListScreen
+import com.example.kasirkita.ui.profile.ProfileDetailScreen
+import com.example.kasirkita.ui.profile.ProfileListScreen
 import com.example.kasirkita.viewmodel.AuthCheckState
 import com.example.kasirkita.viewmodel.AuthUiState
 import com.example.kasirkita.viewmodel.AuthViewModel
+import com.example.kasirkita.viewmodel.CustomerViewModel
 import com.example.kasirkita.viewmodel.KasViewModel
+import com.example.kasirkita.viewmodel.ProfileViewModel
 
 @Composable
 fun AppNavigation(
@@ -28,7 +34,7 @@ fun AppNavigation(
 ) {
     val authCheckState = authViewModel.authCheckState.collectAsStateWithLifecycle()
     val userRole = authViewModel.userRole.collectAsStateWithLifecycle()
-    val isRoleLoaded = authViewModel.isRoleLoaded.collectAsStateWithLifecycle() // ← BARU
+    val isRoleLoaded = authViewModel.isRoleLoaded.collectAsStateWithLifecycle()
 
     when (authCheckState.value) {
         is AuthCheckState.Checking -> {
@@ -37,7 +43,7 @@ fun AppNavigation(
             }
         }
         is AuthCheckState.Authenticated -> {
-            if (!isRoleLoaded.value) { // ← GANTI dari userRole.value == null
+            if (!isRoleLoaded.value) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
@@ -70,7 +76,11 @@ fun MainNavHost(
     val kasirName = authViewModel.kasirName.collectAsStateWithLifecycle()
     val userRole = authViewModel.userRole.collectAsStateWithLifecycle()
     val isRoleLoaded = authViewModel.isRoleLoaded.collectAsStateWithLifecycle()
+
+    // ViewModels dibuat di sini agar shared antar screen dalam satu sesi navigasi
     val kasViewModel: KasViewModel = viewModel()
+    val customerViewModel: CustomerViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = viewModel()
 
     LaunchedEffect(uiState.value, isRoleLoaded.value) {
         if (uiState.value is AuthUiState.Success && isRoleLoaded.value) {
@@ -87,6 +97,8 @@ fun MainNavHost(
     }
 
     NavHost(navController = navController, startDestination = startDestination) {
+
+        // ── Auth ──────────────────────────────────────────────────────
         composable(Screen.Login.route) {
             LoginScreen(
                 email = email.value,
@@ -99,6 +111,7 @@ fun MainNavHost(
             )
         }
 
+        // ── Dashboard ─────────────────────────────────────────────────
         composable(Screen.OwnerDashboard.route) {
             OwnerDashboardScreen(
                 kasirName = kasirName.value,
@@ -117,6 +130,12 @@ fun MainNavHost(
                 },
                 onKelolaKasClick = {
                     navController.navigate(Screen.KasList.route)
+                },
+                onKelolaPelangganClick = {
+                    navController.navigate(Screen.CustomerList.route)
+                },
+                onKelolaProfilClick = {
+                    navController.navigate(Screen.ProfileList.route)
                 }
             )
         }
@@ -131,10 +150,17 @@ fun MainNavHost(
                 },
                 onKelolaKasClick = {
                     navController.navigate(Screen.KasList.route)
+                },
+                onKelolaPelangganClick = {
+                    navController.navigate(Screen.CustomerList.route)
+                },
+                onLihatProfilClick = {
+                    navController.navigate(Screen.ProfileList.route)
                 }
             )
         }
 
+        // ── Kas ───────────────────────────────────────────────────────
         composable(Screen.KasList.route) {
             KasListScreen(
                 kasViewModel = kasViewModel,
@@ -150,6 +176,46 @@ fun MainNavHost(
         composable(Screen.KasDetail.route) {
             KasDetailScreen(
                 kasViewModel = kasViewModel,
+                isOwner = userRole.value == "owner",
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // ── Customer ──────────────────────────────────────────────────
+        composable(Screen.CustomerList.route) {
+            CustomerListScreen(
+                customerViewModel = customerViewModel,
+                onCustomerClick = { customer ->
+                    customerViewModel.selectCustomer(customer)
+                    navController.navigate(Screen.CustomerDetail.route)
+                },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.CustomerDetail.route) {
+            CustomerDetailScreen(
+                customerViewModel = customerViewModel,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // ── Profile ───────────────────────────────────────────────────
+        composable(Screen.ProfileList.route) {
+            ProfileListScreen(
+                profileViewModel = profileViewModel,
+                isOwner = userRole.value == "owner",
+                onProfileClick = { profile ->
+                    profileViewModel.selectProfile(profile)
+                    navController.navigate(Screen.ProfileDetail.route)
+                },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.ProfileDetail.route) {
+            ProfileDetailScreen(
+                profileViewModel = profileViewModel,
                 isOwner = userRole.value == "owner",
                 onBackClick = { navController.popBackStack() }
             )

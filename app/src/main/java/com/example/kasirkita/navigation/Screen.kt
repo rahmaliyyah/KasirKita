@@ -1,31 +1,25 @@
 package com.example.kasirkita.navigation
 
 /*
- * Sealed class juga bisa digunakan untuk route navigasi.
- * Tujuannya agar nama route tidak ditulis manual berkali-kali.
+ * Sealed class untuk semua route navigasi aplikasi.
  */
 sealed class Screen(val route: String) {
 
-    /*
-     * Route untuk halaman login.
-     */
     object Login : Screen("login")
-
-    /*
-     * Route untuk halaman register.
-     */
     object Register : Screen("register")
-
-    /*
-     * Route untuk halaman dashboard.
-     */
     object Dashboard : Screen("dashboard")
     object OwnerDashboard : Screen("owner_dashboard")
     object KasirDashboard : Screen("kasir_dashboard")
 
-    //kas
+    // Kas
     object KasList : Screen("kas_list")
     object KasDetail : Screen("kas_detail")
 
-}
+    // Customer
+    object CustomerList : Screen("customer_list")
+    object CustomerDetail : Screen("customer_detail")
 
+    // Profile
+    object ProfileList : Screen("profile_list")
+    object ProfileDetail : Screen("profile_detail")
+}
