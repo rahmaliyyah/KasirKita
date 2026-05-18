@@ -20,7 +20,9 @@ fun OwnerDashboardScreen(
     onKasirPasswordChange: (String) -> Unit,
     onTambahKasirClick: () -> Unit,
     onLogoutClick: () -> Unit,
-    onKelolaKasClick: () -> Unit
+    onKelolaKasClick: () -> Unit,
+    onKelolaPelangganClick: () -> Unit,
+    onKelolaProfilClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -96,9 +98,33 @@ fun OwnerDashboardScreen(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Button(onClick = onKelolaKasClick){
+        // ── Menu navigasi owner ──────────────────────────────────────
+        Button(
+            onClick = onKelolaKasClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text("Kelola Kas")
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = onKelolaPelangganClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Kelola Pelanggan")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = onKelolaProfilClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Kelola Profil")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = onLogoutClick,
