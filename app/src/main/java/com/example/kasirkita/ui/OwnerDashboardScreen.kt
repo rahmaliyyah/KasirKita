@@ -22,7 +22,8 @@ fun OwnerDashboardScreen(
     onLogoutClick: () -> Unit,
     onKelolaKasClick: () -> Unit,
     onKelolaPelangganClick: () -> Unit,
-    onKelolaProfilClick: () -> Unit
+    onKelolaProfilClick: () -> Unit,
+    onKelolaPengeluaranClick: () -> Unit  // ← TAMBAH INI
 ) {
     Column(
         modifier = Modifier
@@ -113,6 +114,15 @@ fun OwnerDashboardScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Kelola Pelanggan")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = onKelolaPengeluaranClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Kelola Pengeluaran")
         }
 
         Spacer(modifier = Modifier.height(8.dp))

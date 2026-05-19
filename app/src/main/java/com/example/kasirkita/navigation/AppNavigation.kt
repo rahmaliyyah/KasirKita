@@ -17,6 +17,9 @@ import com.example.kasirkita.ui.LoginScreen
 import com.example.kasirkita.ui.OwnerDashboardScreen
 import com.example.kasirkita.ui.customer.CustomerDetailScreen
 import com.example.kasirkita.ui.customer.CustomerListScreen
+import com.example.kasirkita.ui.expense.ExpenseDetailScreen
+import com.example.kasirkita.ui.expense.ExpenseFormScreen
+import com.example.kasirkita.ui.expense.ExpenseListScreen
 import com.example.kasirkita.ui.kas.KasDetailScreen
 import com.example.kasirkita.ui.kas.KasListScreen
 import com.example.kasirkita.ui.profile.ProfileDetailScreen
@@ -27,6 +30,7 @@ import com.example.kasirkita.viewmodel.AuthViewModel
 import com.example.kasirkita.viewmodel.CustomerViewModel
 import com.example.kasirkita.viewmodel.KasViewModel
 import com.example.kasirkita.viewmodel.ProfileViewModel
+import com.example.kasirkita.viewmodel.ExpenseViewModel
 
 @Composable
 fun AppNavigation(
@@ -76,6 +80,7 @@ fun MainNavHost(
     val kasirName = authViewModel.kasirName.collectAsStateWithLifecycle()
     val userRole = authViewModel.userRole.collectAsStateWithLifecycle()
     val isRoleLoaded = authViewModel.isRoleLoaded.collectAsStateWithLifecycle()
+    val expenseViewModel: ExpenseViewModel = viewModel()
 
     // ViewModels dibuat di sini agar shared antar screen dalam satu sesi navigasi
     val kasViewModel: KasViewModel = viewModel()
@@ -136,6 +141,9 @@ fun MainNavHost(
                 },
                 onKelolaProfilClick = {
                     navController.navigate(Screen.ProfileList.route)
+                },
+                onKelolaPengeluaranClick = {
+                    navController.navigate(Screen.ExpenseList.route)
                 }
             )
         }
@@ -218,6 +226,40 @@ fun MainNavHost(
                 profileViewModel = profileViewModel,
                 isOwner = userRole.value == "owner",
                 onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.ExpenseList.route) {
+            ExpenseListScreen(
+                expenseViewModel = expenseViewModel,
+                onExpenseClick = { expense ->
+                    navController.navigate(Screen.ExpenseDetail.createRoute(expense.id))
+                },
+                onAddExpenseClick = {
+                    navController.navigate(Screen.ExpenseForm.route)
+                },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.ExpenseForm.route) {
+            ExpenseFormScreen(
+                expenseViewModel = expenseViewModel,
+                kasViewModel = kasViewModel,
+                onSaveSuccess = {
+                    navController.popBackStack()
+                },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.ExpenseDetail.route) { backStackEntry ->
+            val expenseId = backStackEntry.arguments?.getString("expenseId") ?: return@composable
+            ExpenseDetailScreen(
+                expenseViewModel = expenseViewModel,
+                expenseId = expenseId,
+                onBackClick = { navController.popBackStack() },
+                onEditSuccess = { navController.popBackStack() }
             )
         }
     }

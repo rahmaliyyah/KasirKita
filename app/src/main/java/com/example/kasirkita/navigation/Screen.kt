@@ -22,4 +22,11 @@ sealed class Screen(val route: String) {
     // Profile
     object ProfileList : Screen("profile_list")
     object ProfileDetail : Screen("profile_detail")
+
+    // Expense
+    object ExpenseList : Screen("expense_list")
+    object ExpenseForm : Screen("expense_form")
+    object ExpenseDetail : Screen("expense_detail/{expenseId}") {
+        fun createRoute(expenseId: String) = "expense_detail/$expenseId"
+    }
 }
