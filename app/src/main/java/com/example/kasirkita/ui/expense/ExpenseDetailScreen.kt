@@ -1,27 +1,38 @@
 package com.example.kasirkita.ui.expense
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.kasirkita.ui.components.ModernTopBar
+import com.example.kasirkita.ui.theme.*
+import com.example.kasirkita.utils.formatDate
+import com.example.kasirkita.utils.toRupiah
 import com.example.kasirkita.viewmodel.ExpenseActionState
 import com.example.kasirkita.viewmodel.ExpenseViewModel
 
-/*
- * ExpenseDetailScreen menampilkan detail satu pengeluaran.
- * Owner bisa:
- * - Edit deskripsi (jika status='recorded')
- * - Batalkan pengeluaran (jika status='recorded')
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseDetailScreen(
@@ -30,235 +41,298 @@ fun ExpenseDetailScreen(
     onBackClick: () -> Unit,
     onEditSuccess: () -> Unit
 ) {
-    val selectedExpense = expenseViewModel.selectedExpense.collectAsStateWithLifecycle()
-    val actionState = expenseViewModel.actionState.collectAsStateWithLifecycle()
-    val editDescription = expenseViewModel.expenseDescription.collectAsStateWithLifecycle()
+    val selectedExpense by expenseViewModel.selectedExpense.collectAsStateWithLifecycle()
+    val actionState by expenseViewModel.actionState.collectAsStateWithLifecycle()
+    val editDescription by expenseViewModel.expenseDescription.collectAsStateWithLifecycle()
 
-    var isEditMode by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
     var showCancelConfirm by remember { mutableStateOf(false) }
 
-    // Load expense detail saat screen muncul
     LaunchedEffect(Unit) {
         expenseViewModel.loadExpenseDetail(expenseId)
     }
 
-    // Close screen jika berhasil
-    LaunchedEffect(actionState.value) {
-        if (actionState.value is ExpenseActionState.Success) {
+    LaunchedEffect(actionState) {
+        if (actionState is ExpenseActionState.Success) {
+            if (showEditDialog) {
+                showEditDialog = false
+            } else {
+                onEditSuccess()
+            }
             expenseViewModel.resetActionState()
-            onEditSuccess()
         }
     }
 
-    val expense = selectedExpense.value
+    val expense = selectedExpense
+    val isCancelled = expense?.status == "cancelled"
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = { Text("Detail Pengeluaran") },
-                navigationIcon = {
-                    TextButton(onClick = onBackClick) {
-                        Text("← Kembali")
-                    }
-                }
+            ModernTopBar(
+                title = "Detail Pengeluaran",
+                onBackClick = onBackClick
             )
         }
-    ) { paddingValues ->
+    ) { innerPadding ->
         Box(
             modifier = Modifier
-                .padding(paddingValues)
                 .fillMaxSize()
+                .padding(innerPadding)
         ) {
             if (expense == null) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = GoldPrimary)
+                }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    // Status badge
+                    // 1. Elegance Header Section (Gradient & Big Amount)
                     item {
-                        Row(
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            color = MaterialTheme.colorScheme.surface,
+                            shadowElevation = 4.dp,
+                            shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
                         ) {
-                            Text("Status", fontWeight = FontWeight.Bold)
-                            Badge(
-                                containerColor = if (expense.status == "recorded") {
-                                    Color(0xFF4CAF50)
-                                } else {
-                                    Color(0xFFF44336)
-                                }
-                            ) {
-                                Text(
-                                    text = if (expense.status == "recorded") "Tercatat" else "Dibatalkan",
-                                    color = Color.White,
-                                    modifier = Modifier.padding(4.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // Tanggal
-                    item {
-                        Column {
-                            Text("Tanggal", fontWeight = FontWeight.Bold)
-                            Text(
-                                text = expense.date.formatDate(),
-                                color = Color.Gray
-                            )
-                        }
-                    }
-
-                    // Jumlah
-                    item {
-                        Column {
-                            Text("Jumlah", fontWeight = FontWeight.Bold)
-                            Text(
-                                text = expense.amount.toRupiah(),
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                        }
-                    }
-
-                    // Deskripsi / Edit Deskripsi
-                    item {
-                        Column {
-                            Text("Deskripsi", fontWeight = FontWeight.Bold)
-                            if (isEditMode && expense.status == "recorded") {
-                                OutlinedTextField(
-                                    value = editDescription.value,
-                                    onValueChange = { expenseViewModel.setExpenseDescription(it) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    minLines = 3
-                                )
-                            } else {
-                                Text(
-                                    text = expense.description,
-                                    color = Color.Gray
-                                )
-                            }
-                        }
-                    }
-
-                    // Error message
-                    if (actionState.value is ExpenseActionState.Error) {
-                        item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer
-                                )
-                            ) {
-                                Text(
-                                    text = (actionState.value as ExpenseActionState.Error).message,
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.padding(12.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // Action buttons (hanya jika status='recorded')
-                    if (expense.status == "recorded") {
-                        item {
-                            if (isEditMode) {
-                                // Save / Cancel buttons
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Column(
+                                    modifier = Modifier
+                                        .padding(32.dp)
+                                        .fillMaxWidth()
+                                        .graphicsLayer(alpha = if (isCancelled) 0.4f else 1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Button(
-                                        onClick = {
-                                            expenseViewModel.updateExpenseDescription(
-                                                expenseId,
-                                                editDescription.value
-                                            )
-                                            isEditMode = false
-                                        },
-                                        modifier = Modifier.weight(1f),
-                                        enabled = actionState.value !is ExpenseActionState.Loading
-                                    ) {
-                                        Text("Simpan")
-                                    }
-                                    OutlinedButton(
-                                        onClick = { isEditMode = false },
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text("Batal")
-                                    }
-                                }
-                            } else {
-                                // Edit / Cancel buttons
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Button(
-                                        onClick = { isEditMode = true },
-                                        modifier = Modifier.weight(1f)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(100.dp)
+                                            .shadow(12.dp, CircleShape)
+                                            .clip(CircleShape)
+                                            .background(
+                                                brush = Brush.linearGradient(
+                                                    colors = listOf(Error, Error.copy(alpha = 0.7f))
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            Icons.Default.Edit,
-                                            contentDescription = null
+                                            Icons.Default.Payments, 
+                                            contentDescription = null, 
+                                            tint = Color.White, 
+                                            modifier = Modifier.size(48.dp)
                                         )
-
-                                        Spacer(
-                                            modifier = Modifier.width(4.dp)
-                                        )
-
-                                        Text("Edit Deskripsi")
                                     }
-                                    OutlinedButton(
-                                        onClick = { showCancelConfirm = true },
-                                        modifier = Modifier.weight(1f),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            contentColor = MaterialTheme.colorScheme.error
+
+                                    Spacer(modifier = Modifier.height(24.dp))
+
+                                    Text(
+                                        text = expense.amount.toRupiah(),
+                                        style = MaterialTheme.typography.displaySmall.copy(
+                                            fontWeight = FontWeight.Black,
+                                            color = Error
                                         )
+                                    )
+
+                                    Text(
+                                        text = expense.date.formatDate(),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+
+                                if (isCancelled) {
+                                    Surface(
+                                        color = Error,
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(16.dp),
+                                        shape = RoundedCornerShape(8.dp)
                                     ) {
-                                        Icon(Icons.Default.Delete, contentDescription = null)
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Batalkan")
+                                        Text(
+                                            "DIBATALKAN",
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                            fontSize = 10.sp,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Black
+                                        )
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                // Confirmation dialog untuk cancel
-                if (showCancelConfirm) {
-                    AlertDialog(
-                        onDismissRequest = { showCancelConfirm = false },
-                        title = { Text("Batalkan Pengeluaran?") },
-                        text = {
+                    // 2. Info Detail Card
+                    item {
+                        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                             Text(
-                                "Membatalkan pengeluaran akan mengembalikan saldo kas sebesar ${expense.amount.toRupiah()}. " +
-                                        "Lanjutkan?"
+                                "Informasi Pengeluaran",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.padding(start = 4.dp)
                             )
-                        },
-                        confirmButton = {
-                            Button(
-                                onClick = {
-                                    expenseViewModel.cancelExpense(expenseId)
-                                    showCancelConfirm = false
-                                }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(28.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                             ) {
-                                Text("Ya, Batalkan")
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showCancelConfirm = false }) {
-                                Text("Tidak")
+                                Column(
+                                    modifier = Modifier.padding(24.dp),
+                                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                                ) {
+                                    DetailRow(
+                                        label = "Deskripsi", 
+                                        value = expense.description, 
+                                        icon = Icons.Default.Description
+                                    )
+                                    
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    
+                                    DetailRow(
+                                        label = "ID Transaksi", 
+                                        value = "#EXP-${expense.id.take(8).uppercase()}", 
+                                        icon = Icons.Default.Event
+                                    )
+                                }
                             }
                         }
-                    )
+                    }
+
+                    // 3. Action Buttons
+                    if (!isCancelled) {
+                        item {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 20.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Button(
+                                    onClick = { showEditDialog = true },
+                                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary)
+                                ) {
+                                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Ubah Deskripsi", fontWeight = FontWeight.Bold)
+                                }
+                                
+                                Button(
+                                    onClick = { showCancelConfirm = true },
+                                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Error.copy(alpha = 0.08f),
+                                        contentColor = Error
+                                    ),
+                                    elevation = ButtonDefaults.buttonElevation(0.dp)
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Batalkan Pengeluaran", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
                 }
             }
+
+            if (actionState is ExpenseActionState.Loading) {
+                Surface(
+                    color = Color.Black.copy(alpha = 0.3f),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color.White)
+                    }
+                }
+            }
+        }
+
+        if (showEditDialog && expense != null) {
+            AlertDialog(
+                onDismissRequest = { showEditDialog = false },
+                title = { Text("Ubah Deskripsi", fontWeight = FontWeight.Bold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Masukkan deskripsi baru untuk pengeluaran ini.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        OutlinedTextField(
+                            value = editDescription,
+                            onValueChange = expenseViewModel::setExpenseDescription,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = GoldPrimary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            placeholder = { Text("Deskripsi...") }
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            expenseViewModel.updateExpenseDescription(expenseId, editDescription)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = editDescription.isNotBlank()
+                    ) {
+                        Text("Simpan")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showEditDialog = false }) {
+                        Text("Batal")
+                    }
+                },
+                shape = RoundedCornerShape(24.dp),
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        }
+
+        if (showCancelConfirm && expense != null) {
+            AlertDialog(
+                onDismissRequest = { showCancelConfirm = false },
+                title = { Text("Batalkan Pengeluaran?", fontWeight = FontWeight.Bold) },
+                text = { Text("Tindakan ini akan mengembalikan saldo kas sebesar ${expense.amount.toRupiah()} dan tidak dapat dibatalkan kembali.") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            expenseViewModel.cancelExpense(expenseId)
+                            showCancelConfirm = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Error),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Ya, Batalkan")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCancelConfirm = false }) {
+                        Text("Kembali")
+                    }
+                },
+                shape = RoundedCornerShape(24.dp),
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        }
+    }
+}
+
+@Composable
+fun DetailRow(label: String, value: String, icon: ImageVector) {
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(icon, contentDescription = null, tint = GoldPrimary, modifier = Modifier.size(20.dp).padding(top = 2.dp))
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
         }
     }
 }

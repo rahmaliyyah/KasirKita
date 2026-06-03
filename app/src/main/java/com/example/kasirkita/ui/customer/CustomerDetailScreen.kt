@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.kasirkita.model.CustomerLog
+import com.example.kasirkita.ui.components.ModernTopBar
 import com.example.kasirkita.viewmodel.CustomerActionState
 import com.example.kasirkita.viewmodel.CustomerLogUiState
 import com.example.kasirkita.viewmodel.CustomerViewModel
@@ -54,13 +55,9 @@ fun CustomerDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(customer?.name ?: "Detail Pelanggan") },
-                navigationIcon = {
-                    TextButton(onClick = onBackClick) {
-                        Text("← Kembali")
-                    }
-                }
+            ModernTopBar(
+                title = customer?.name ?: "Detail Pelanggan",
+                onBackClick = onBackClick
             )
         }
     ) { paddingValues ->

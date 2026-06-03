@@ -43,7 +43,9 @@ class ExpenseViewModel : ViewModel() {
     fun loadAllExpenses() {
         viewModelScope.launch {
             try {
-                _expenseListState.value = ExpenseListUiState.Loading
+                if (_expenseListState.value !is ExpenseListUiState.Success) {
+                    _expenseListState.value = ExpenseListUiState.Loading
+                }
                 val expenses = expenseRepository.getExpenses()
                 _expenseListState.value = ExpenseListUiState.Success(expenses)
             } catch (e: Exception) {
@@ -58,7 +60,9 @@ class ExpenseViewModel : ViewModel() {
     fun loadExpensesByCashRegister(cashRegisterId: String) {
         viewModelScope.launch {
             try {
-                _expenseListState.value = ExpenseListUiState.Loading
+                if (_expenseListState.value !is ExpenseListUiState.Success) {
+                    _expenseListState.value = ExpenseListUiState.Loading
+                }
                 val expenses = expenseRepository.getExpensesByCashRegister(cashRegisterId)
                 _expenseListState.value = ExpenseListUiState.Success(expenses)
             } catch (e: Exception) {
@@ -89,19 +93,26 @@ class ExpenseViewModel : ViewModel() {
     /*
      * Catat pengeluaran baru
      */
-    fun createExpense(
-        cashRegisterId: String,
-        date: String,
-        description: String,
-        amountStr: String
-    ) {
+    fun createExpense() {
+        val cashRegisterId = _selectedCashRegisterId.value
+        val date = _expenseDate.value
+        val description = _expenseDescription.value
+        val amountStr = _expenseAmount.value
+
         // Validasi
+        if (cashRegisterId.isBlank()) {
+            _actionState.value = ExpenseActionState.Error("Pilih kas terlebih dahulu")
+            return
+        }
+
         if (description.isBlank()) {
             _actionState.value = ExpenseActionState.Error("Deskripsi tidak boleh kosong")
             return
         }
 
-        val amount = amountStr.toDoubleOrNull()
+        // Bersihkan titik/koma jika ada (format ribuan Indonesia)
+        val cleanAmountStr = amountStr.replace(".", "").replace(",", "")
+        val amount = cleanAmountStr.toDoubleOrNull()
         if (amount == null || amount <= 0) {
             _actionState.value = ExpenseActionState.Error("Jumlah harus angka positif")
             return
@@ -156,6 +167,7 @@ class ExpenseViewModel : ViewModel() {
                 _actionState.value = ExpenseActionState.Loading
                 expenseRepository.updateExpense(expenseId, description = newDescription)
                 _actionState.value = ExpenseActionState.Success
+                loadExpenseDetail(expenseId)
                 loadAllExpenses()
             } catch (e: Exception) {
                 _actionState.value = ExpenseActionState.Error(e.message ?: "Error updating expense")

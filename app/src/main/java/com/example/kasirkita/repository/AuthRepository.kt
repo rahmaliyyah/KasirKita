@@ -53,17 +53,20 @@ class AuthRepository {
         supabase.auth.awaitInitialization()
     }
 
-    // Fungsi baru: ambil role user yang sedang login
-    suspend fun getUserRole(): String? {
+    // Fungsi baru: ambil profile user yang sedang login
+    suspend fun getUserProfile(): UserProfile? {
         val userId = supabase.auth.currentSessionOrNull()?.user?.id ?: return null
-        val result = supabase.postgrest["profiles"]
-            .select {
-                filter {
-                    eq("id", userId)
+        return try {
+            supabase.postgrest["profiles"]
+                .select {
+                    filter {
+                        eq("id", userId)
+                    }
                 }
-            }
-            .decodeSingle<UserProfile>()
-        return result.role
+                .decodeSingle<UserProfile>()
+        } catch (e: Exception) {
+            null
+        }
     }
 
     // Fungsi baru: register kasir oleh owner

@@ -13,6 +13,7 @@ import com.example.kasirkita.model.CashRegister
 import com.example.kasirkita.viewmodel.ExpenseActionState
 import com.example.kasirkita.viewmodel.ExpenseViewModel
 import com.example.kasirkita.viewmodel.KasViewModel
+import com.example.kasirkita.utils.formatDate
 import java.util.Calendar
 
 /*
@@ -176,12 +177,7 @@ fun ExpenseFormScreen(
                 item {
                     Button(
                         onClick = {
-                            expenseViewModel.createExpense(
-                                cashRegisterId = selectedCashRegister.value,
-                                date = expenseDate.value,
-                                description = expenseDescription.value,
-                                amountStr = expenseAmount.value
-                            )
+                            expenseViewModel.createExpense()
                         },
                         enabled = actionState.value !is ExpenseActionState.Loading,
                         modifier = Modifier.fillMaxWidth()

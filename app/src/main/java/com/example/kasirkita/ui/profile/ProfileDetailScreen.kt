@@ -8,6 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.kasirkita.ui.components.ModernTopBar
+import com.example.kasirkita.ui.theme.TextPrimary
 import com.example.kasirkita.viewmodel.ProfileActionState
 import com.example.kasirkita.viewmodel.ProfileViewModel
 
@@ -42,13 +44,9 @@ fun ProfileDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(profile?.name ?: "Detail Profil") },
-                navigationIcon = {
-                    TextButton(onClick = onBackClick) {
-                        Text("← Kembali")
-                    }
-                }
+            ModernTopBar(
+                title = "Detail Profil",
+                onBackClick = onBackClick
             )
         }
     ) { paddingValues ->

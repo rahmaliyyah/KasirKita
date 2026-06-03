@@ -1,9 +1,14 @@
 package com.example.kasirkita.ui.kas
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,48 +17,45 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.kasirkita.model.CashLog
+import com.example.kasirkita.ui.components.ModernTopBar
+import com.example.kasirkita.ui.theme.*
+import com.example.kasirkita.utils.formatDate
+import com.example.kasirkita.utils.toRupiah
 import com.example.kasirkita.viewmodel.KasActionState
 import com.example.kasirkita.viewmodel.KasLogUiState
 import com.example.kasirkita.viewmodel.KasViewModel
 
-/*
- * KasDetailScreen menampilkan:
- * 1. Info saldo kas yang dipilih
- * 2. Tombol transaksi manual (owner only)
- * 3. Tombol edit nama & nonaktifkan (owner only)
- * 4. Log semua transaksi kas ini
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KasDetailScreen(
     kasViewModel: KasViewModel,
     isOwner: Boolean,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onSaleClick: (String) -> Unit,
+    onExpenseClick: (String) -> Unit
 ) {
-    val selectedKas = kasViewModel.selectedKas.collectAsStateWithLifecycle()
-    val kasLogState = kasViewModel.kasLogState.collectAsStateWithLifecycle()
-    val actionState = kasViewModel.actionState.collectAsStateWithLifecycle()
-    val transactionAmount = kasViewModel.transactionAmount.collectAsStateWithLifecycle()
-    val transactionDescription = kasViewModel.transactionDescription.collectAsStateWithLifecycle()
-    val kasName = kasViewModel.kasName.collectAsStateWithLifecycle()
+    val selectedKas by kasViewModel.selectedKas.collectAsStateWithLifecycle()
+    val kasLogState by kasViewModel.kasLogState.collectAsStateWithLifecycle()
+    val actionState by kasViewModel.actionState.collectAsStateWithLifecycle()
+    val transactionAmount by kasViewModel.transactionAmount.collectAsStateWithLifecycle()
+    val transactionDescription by kasViewModel.transactionDescription.collectAsStateWithLifecycle()
+    val kasName by kasViewModel.kasName.collectAsStateWithLifecycle()
 
-    // State lokal untuk dialog
     var showTransaksiDialog by remember { mutableStateOf(false) }
     var transactionType by remember { mutableStateOf("manual_in") }
     var showEditDialog by remember { mutableStateOf(false) }
 
-    val kas = selectedKas.value
+    val kas = selectedKas
 
-    // Load log saat screen tampil
     LaunchedEffect(kas?.id) {
         kas?.id?.let { kasViewModel.loadKasLogs(it) }
     }
 
-    // Reset state setelah aksi berhasil
-    LaunchedEffect(actionState.value) {
-        if (actionState.value is KasActionState.Success) {
+    LaunchedEffect(actionState) {
+        if (actionState is KasActionState.Success) {
             showTransaksiDialog = false
             showEditDialog = false
             kasViewModel.resetActionState()
@@ -62,13 +64,9 @@ fun KasDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(kas?.name ?: "Detail Kas") },
-                navigationIcon = {
-                    TextButton(onClick = onBackClick) {
-                        Text("← Kembali")
-                    }
-                }
+            ModernTopBar(
+                title = kas?.name ?: "Detail Kas",
+                onBackClick = onBackClick
             )
         }
     ) { paddingValues ->
@@ -77,143 +75,142 @@ fun KasDetailScreen(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Kas tidak ditemukan")
+                CircularProgressIndicator(color = GoldPrimary)
             }
-            return@Scaffold
-        }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // ── Card info saldo ──────────────────────────────────────
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text(
-                            text = "Saldo Saat Ini",
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = kas.currentBalance.toRupiah(),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Surface(
-                            shape = MaterialTheme.shapes.small,
-                            color = if (kas.isActive) Color(0xFF2E7D32) else Color(0xFFC62828)
-                        ) {
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(paddingValues).background(MaterialTheme.colorScheme.background),
+                contentPadding = PaddingValues(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(24.dp)) {
+                            Text(text = "Saldo Saat Ini", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = if (kas.isActive) "Aktif" else "Nonaktif",
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelSmall
+                                text = kas.currentBalance.toRupiah(),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Black,
+                                color = if (kas.currentBalance >= 0) Success else Error
                             )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (kas.isActive) Success.copy(alpha = 0.1f) else Error.copy(alpha = 0.1f)
+                            ) {
+                                Text(
+                                    text = if (kas.isActive) "Kas Aktif" else "Kas Nonaktif",
+                                    color = if (kas.isActive) Success else Error,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // ── Tombol aksi (hanya owner) ────────────────────────────
-            if (isOwner) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Tombol tambah saldo manual
-                        Button(
-                            onClick = {
-                                transactionType = "manual_in"
-                                showTransaksiDialog = true
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("+ Tambah Saldo Manual")
-                        }
-                        // Tombol kurangi saldo manual
-                        OutlinedButton(
-                            onClick = {
-                                transactionType = "manual_out"
-                                showTransaksiDialog = true
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("− Kurangi Saldo Manual")
-                        }
-                        // Tombol edit nama
-                        OutlinedButton(
-                            onClick = {
-                                kasViewModel.onKasNameChange(kas.name)
-                                showEditDialog = true
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Edit Nama Kas")
-                        }
-                        // Tombol aktifkan / nonaktifkan
-                        OutlinedButton(
-                            onClick = { kasViewModel.toggleKasActive(kas.id, kas.isActive) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = if (kas.isActive) {
-                                    MaterialTheme.colorScheme.error
-                                } else {
-                                    MaterialTheme.colorScheme.primary
+                if (isOwner) {
+                    item {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            SmallActionCard(
+                                title = "Masuk",
+                                icon = Icons.Default.Add,
+                                color = Success,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    transactionType = "manual_in"
+                                    showTransaksiDialog = true
                                 }
                             )
-                        ) {
-                            Text(if (kas.isActive) "Nonaktifkan Kas" else "Aktifkan Kas")
-                        }
-                    }
-                }
-            }
-
-            // ── Header log transaksi ─────────────────────────────────
-            item {
-                Text(
-                    text = "Riwayat Transaksi",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            // ── List log ─────────────────────────────────────────────
-            when (val logState = kasLogState.value) {
-                is KasLogUiState.Loading -> {
-                    item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-                }
-                is KasLogUiState.Error -> {
-                    item {
-                        Text(
-                            text = logState.message,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-                is KasLogUiState.Success -> {
-                    if (logState.logs.isEmpty()) {
-                        item {
-                            Text(
-                                text = "Belum ada transaksi.",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            SmallActionCard(
+                                title = "Keluar",
+                                icon = Icons.Default.Remove,
+                                color = Error,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    transactionType = "manual_out"
+                                    showTransaksiDialog = true
+                                }
                             )
                         }
-                    } else {
-                        items(logState.logs) { log ->
-                            CashLogItem(log = log)
+                    }
+                    
+                    item {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedButton(
+                                onClick = { 
+                                    kasViewModel.onKasNameChange(kas.name)
+                                    showEditDialog = true 
+                                },
+                                modifier = Modifier.weight(1f).height(50.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Edit Nama")
+                            }
+                            
+                            Button(
+                                onClick = { kasViewModel.toggleKasActive(kas.id, kas.isActive) },
+                                modifier = Modifier.weight(1f).height(50.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (kas.isActive) Error.copy(alpha = 0.1f) else Success.copy(alpha = 0.1f),
+                                    contentColor = if (kas.isActive) Error else Success
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(0.dp)
+                            ) {
+                                Text(if (kas.isActive) "Nonaktifkan" else "Aktifkan")
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Text(
+                        text = "Riwayat Transaksi",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+
+                when (val logState = kasLogState) {
+                    is KasLogUiState.Loading -> {
+                        item {
+                            Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = GoldPrimary)
+                            }
+                        }
+                    }
+                    is KasLogUiState.Error -> {
+                        item {
+                            Text(text = logState.message, color = Error)
+                        }
+                    }
+                    is KasLogUiState.Success -> {
+                        if (logState.logs.isEmpty()) {
+                            item {
+                                Text(text = "Belum ada riwayat transaksi.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        } else {
+                            items(logState.logs) { log ->
+                                CashLogItem(
+                                    log = log,
+                                    onClick = {
+                                        if (log.type == "sale" && log.referenceId != null) {
+                                            onSaleClick(log.referenceId)
+                                        } else if (log.type == "expense" && log.referenceId != null) {
+                                            onExpenseClick(log.referenceId)
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -221,127 +218,100 @@ fun KasDetailScreen(
         }
     }
 
-    // ── Dialog transaksi manual ──────────────────────────────────────
     if (showTransaksiDialog) {
         val title = if (transactionType == "manual_in") "Tambah Saldo" else "Kurangi Saldo"
         AlertDialog(
-            onDismissRequest = {
-                showTransaksiDialog = false
-                kasViewModel.resetTransactionForm()
-                kasViewModel.resetActionState()
-            },
-            title = { Text(title) },
+            onDismissRequest = { showTransaksiDialog = false },
+            title = { Text(title, fontWeight = FontWeight.Bold) },
             text = {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
-                        value = transactionAmount.value,
+                        value = transactionAmount,
                         onValueChange = kasViewModel::onTransactionAmountChange,
                         label = { Text("Jumlah (Rp)") },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GoldPrimary)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
-                        value = transactionDescription.value,
+                        value = transactionDescription,
                         onValueChange = kasViewModel::onTransactionDescriptionChange,
                         label = { Text("Keterangan (opsional)") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GoldPrimary)
                     )
-                    if (actionState.value is KasActionState.Error) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = (actionState.value as KasActionState.Error).message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                    if (actionState is KasActionState.Error) {
+                        Text(text = (actionState as KasActionState.Error).message, color = Error, fontSize = 12.sp)
                     }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = { kasViewModel.manualTransaction(transactionType) },
-                    enabled = actionState.value !is KasActionState.Loading
-                ) {
-                    if (actionState.value is KasActionState.Loading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("Simpan")
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showTransaksiDialog = false
-                    kasViewModel.resetTransactionForm()
-                    kasViewModel.resetActionState()
-                }) {
-                    Text("Batal")
-                }
-            }
-        )
-    }
-
-    // ── Dialog edit nama kas ─────────────────────────────────────────
-    if (showEditDialog && kas != null) {
-        AlertDialog(
-            onDismissRequest = {
-                showEditDialog = false
-                kasViewModel.resetKasForm()
-                kasViewModel.resetActionState()
-            },
-            title = { Text("Edit Nama Kas") },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = kasName.value,
-                        onValueChange = kasViewModel::onKasNameChange,
-                        label = { Text("Nama Kas") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                    if (actionState.value is KasActionState.Error) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = (actionState.value as KasActionState.Error).message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { kasViewModel.updateKasName(kas.id) },
-                    enabled = actionState.value !is KasActionState.Loading
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+                    enabled = actionState !is KasActionState.Loading && transactionAmount.isNotBlank()
                 ) {
                     Text("Simpan")
                 }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showEditDialog = false
-                    kasViewModel.resetKasForm()
-                    kasViewModel.resetActionState()
-                }) {
-                    Text("Batal")
+                TextButton(onClick = { showTransaksiDialog = false }) { Text("Batal") }
+            },
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    if (showEditDialog && kas != null) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Edit Nama Kas", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = kasName,
+                        onValueChange = kasViewModel::onKasNameChange,
+                        label = { Text("Nama Kas") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GoldPrimary)
+                    )
                 }
-            }
+            },
+            confirmButton = {
+                Button(onClick = { kasViewModel.updateKasName(kas.id) }, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary)) {
+                    Text("Simpan")
+                }
+            },
+            dismissButton = { TextButton(onClick = { showEditDialog = false }) { Text("Batal") } },
+            shape = RoundedCornerShape(24.dp)
         )
     }
 }
 
-/*
- * Card satu baris log transaksi.
- * Masuk (manual_in, sale) = warna hijau
- * Keluar (manual_out, expense) = warna merah
- */
 @Composable
-fun CashLogItem(log: CashLog) {
+fun SmallActionCard(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Card(
+        modifier = modifier.height(80.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.08f)),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = color)
+            Spacer(Modifier.height(4.dp))
+            Text(title, color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        }
+    }
+}
+
+@Composable
+fun CashLogItem(log: CashLog, onClick: () -> Unit) {
     val isIncoming = log.type in listOf("manual_in", "sale")
     val typeLabel = when (log.type) {
         "manual_in"  -> "Masuk Manual"
@@ -352,42 +322,29 @@ fun CashLogItem(log: CashLog) {
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(1.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = typeLabel,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Medium
-                )
+                Text(text = typeLabel, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 if (!log.description.isNullOrBlank()) {
-                    Text(
-                        text = log.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text(text = log.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text(
-                    text = "Saldo: ${log.balanceAfter.toRupiah()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = log.createdAt.take(10),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(text = log.createdAt.take(10).formatDate(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text(
                 text = "${if (isIncoming) "+" else "−"} ${log.amount.toRupiah()}",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = if (isIncoming) Color(0xFF2E7D32) else Color(0xFFC62828)
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = if (isIncoming) Success else Error
             )
         }
     }

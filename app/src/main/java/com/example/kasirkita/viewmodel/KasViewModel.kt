@@ -74,7 +74,9 @@ class KasViewModel : ViewModel() {
     fun loadKasRegisters() {
         viewModelScope.launch {
             try {
-                _kasListState.value = KasListUiState.Loading
+                if (_kasListState.value !is KasListUiState.Success) {
+                    _kasListState.value = KasListUiState.Loading
+                }
                 val list = repository.getCashRegisters()
                 _kasListState.value = KasListUiState.Success(list)
                 refreshSelectedKas(list) // ← tambah baris ini

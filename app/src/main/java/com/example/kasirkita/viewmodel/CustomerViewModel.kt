@@ -61,7 +61,9 @@ class CustomerViewModel : ViewModel() {
     fun loadCustomers() {
         viewModelScope.launch {
             try {
-                _customerListState.value = CustomerListUiState.Loading
+                if (_customerListState.value !is CustomerListUiState.Success) {
+                    _customerListState.value = CustomerListUiState.Loading
+                }
                 val list = repository.getCustomers()
                 _customerListState.value = CustomerListUiState.Success(list)
                 refreshSelectedCustomer(list)

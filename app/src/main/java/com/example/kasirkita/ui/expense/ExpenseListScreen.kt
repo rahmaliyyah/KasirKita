@@ -1,186 +1,259 @@
 package com.example.kasirkita.ui.expense
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.kasirkita.model.Expense
+import com.example.kasirkita.ui.components.ModernTopBar
+import com.example.kasirkita.ui.theme.*
+import com.example.kasirkita.utils.formatDate
+import com.example.kasirkita.utils.toRupiah
 import com.example.kasirkita.viewmodel.ExpenseListUiState
 import com.example.kasirkita.viewmodel.ExpenseViewModel
-import java.text.NumberFormat
-import java.text.SimpleDateFormat
+import com.example.kasirkita.viewmodel.KasViewModel
 import java.util.*
 
-/*
- * Format angka ke Rupiah
- */
-fun Double.toRupiah(): String {
-    val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-    return format.format(this)
-}
-
-/*
- * Format tanggal ISO ke format lokal (dd/MM/yyyy)
- */
-fun String.formatDate(): String {
-    return try {
-        val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-        val displayFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-        val date = isoFormat.parse(this) ?: return this
-        displayFormat.format(date)
-    } catch (e: Exception) {
-        this
-    }
-}
-
-/*
- * ExpenseListScreen menampilkan laporan daftar pengeluaran.
- * Owner bisa tambah pengeluaran baru (FAB).
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseListScreen(
     expenseViewModel: ExpenseViewModel,
+    kasViewModel: KasViewModel,
     onExpenseClick: (Expense) -> Unit,
-    onAddExpenseClick: () -> Unit,
     onBackClick: () -> Unit
 ) {
-    val expenseListState = expenseViewModel.expenseListState.collectAsStateWithLifecycle()
+    val expenseListState by expenseViewModel.expenseListState.collectAsStateWithLifecycle()
+    var searchQuery by remember { mutableStateOf("") }
+    var showFormDialog by remember { mutableStateOf(false) }
 
-    // Load data saat screen pertama kali tampil
     LaunchedEffect(Unit) {
         expenseViewModel.loadAllExpenses()
     }
 
+    val filteredExpenses = remember(expenseListState, searchQuery) {
+        if (expenseListState is ExpenseListUiState.Success) {
+            (expenseListState as ExpenseListUiState.Success).expenses.filter {
+                it.description.contains(searchQuery, ignoreCase = true)
+            }
+        } else emptyList()
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Laporan Pengeluaran") },
-                navigationIcon = {
-                    TextButton(onClick = onBackClick) {
-                        Text("← Kembali")
+            Column {
+                ModernTopBar(
+                    title = "Pengeluaran",
+                    onBackClick = onBackClick
+                )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    Column {
+                        if (expenseListState is ExpenseListUiState.Loading && filteredExpenses.isNotEmpty()) {
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth().height(2.dp),
+                                color = GoldPrimary,
+                                trackColor = GoldPrimary.copy(alpha = 0.1f)
+                            )
+                        }
+                        
+                        // Search Bar
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text("Cari pengeluaran...", fontSize = 14.sp) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 8.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = GoldPrimary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+                                focusedContainerColor = MaterialTheme.colorScheme.background,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.background
+                            ),
+                            singleLine = true
+                        )
                     }
                 }
-            )
+            }
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddExpenseClick) {
-                Icon(Icons.Default.Add, contentDescription = "Catat Pengeluaran")
+            FloatingActionButton(
+                onClick = { showFormDialog = true },
+                containerColor = GoldPrimary,
+                contentColor = Color.White,
+                shape = CircleShape
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Tambah")
             }
         }
-    ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
-            when (val state = expenseListState.value) {
-                is ExpenseListUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            if (expenseListState is ExpenseListUiState.Loading && filteredExpenses.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = GoldPrimary)
                 }
-                is ExpenseListUiState.Error -> {
-                    Text(
-                        text = "Error: ${state.message}",
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.align(Alignment.Center).padding(16.dp)
-                    )
-                }
-                is ExpenseListUiState.Success -> {
-                    if (state.expenses.isEmpty()) {
-                        Text(
-                            text = "Belum ada pengeluaran. Tap + untuk menambah.",
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(state.expenses) { expense ->
-                                ExpenseItem(
-                                    expense = expense,
-                                    onClick = { onExpenseClick(expense) }
-                                )
-                            }
+            } else {
+                if (filteredExpenses.isEmpty() && expenseListState !is ExpenseListUiState.Loading) {
+                    EmptyExpenseState()
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(filteredExpenses) { expense ->
+                            ExpenseItem(expense) { onExpenseClick(expense) }
                         }
                     }
                 }
             }
+
+            if (expenseListState is ExpenseListUiState.Error) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text((expenseListState as ExpenseListUiState.Error).message, color = Error)
+                }
+            }
         }
+    }
+
+    if (showFormDialog) {
+        ExpenseFormDialog(
+            expenseViewModel = expenseViewModel,
+            kasViewModel = kasViewModel,
+            onDismiss = { 
+                showFormDialog = false 
+                expenseViewModel.resetFormFields()
+            },
+            onSuccess = {
+                showFormDialog = false
+                expenseViewModel.loadAllExpenses()
+            }
+        )
     }
 }
 
-/*
- * Satu item pengeluaran dalam list
- */
 @Composable
 fun ExpenseItem(
     expense: Expense,
     onClick: () -> Unit
 ) {
+    val isCancelled = expense.status == "cancelled"
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isCancelled) 0.dp else 1.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            // Row 1: Deskripsi & Status
+        Box(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(16.dp)
+                    .fillMaxWidth()
+                    .graphicsLayer(alpha = if (isCancelled) 0.4f else 1f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = expense.description,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                // Status badge
-                Badge(
-                    modifier = Modifier.align(Alignment.Top),
-                    containerColor = if (expense.status == "recorded") {
-                        Color(0xFF4CAF50)  // Green
-                    } else {
-                        Color(0xFFF44336)  // Red
-                    }
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Error.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = if (expense.status == "recorded") "Tercatat" else "Dibatalkan",
-                        color = Color.White,
-                        modifier = Modifier.padding(4.dp)
+                    Icon(
+                        Icons.AutoMirrored.Filled.ReceiptLong,
+                        contentDescription = null,
+                        tint = Error,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = expense.description,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = expense.date.formatDate(),
+                        style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    )
+                }
+
+                Text(
+                    text = "-${expense.amount.toRupiah()}",
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Error
+                    )
+                )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Row 2: Amount
-            Text(
-                text = "Jumlah: ${expense.amount.toRupiah()}",
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Row 3: Tanggal
-            Text(
-                text = "Tanggal: ${expense.date.formatDate()}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
+            if (isCancelled) {
+                Text(
+                    text = "Dibatalkan",
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 8.dp, end = 12.dp),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 8.sp,
+                        color = Error,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun EmptyExpenseState() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.AutoMirrored.Filled.ReceiptLong,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = MaterialTheme.colorScheme.surfaceVariant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Belum Ada Pengeluaran", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+        Text("Catat pengeluaran operasional di sini", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
     }
 }

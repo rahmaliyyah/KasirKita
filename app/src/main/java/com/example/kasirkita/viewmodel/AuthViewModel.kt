@@ -27,6 +27,9 @@ class AuthViewModel : ViewModel() {
     private val _userRole = MutableStateFlow<String?>(null)
     val userRole: StateFlow<String?> = _userRole
 
+    private val _userName = MutableStateFlow<String?>(null)
+    val userName: StateFlow<String?> = _userName
+
     private val _isRoleLoaded = MutableStateFlow(false)
     val isRoleLoaded: StateFlow<Boolean> = _isRoleLoaded
 
@@ -38,6 +41,9 @@ class AuthViewModel : ViewModel() {
 
     private val _kasirName = MutableStateFlow("")
     val kasirName: StateFlow<String> = _kasirName
+
+    private val _isDarkMode = MutableStateFlow(false)
+    val isDarkMode: StateFlow<Boolean> = _isDarkMode
 
     init {
         observeAuthStatus()
@@ -66,12 +72,14 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 _isRoleLoaded.value = false
-                val role = repository.getUserRole()
-                android.util.Log.d("AUTH_DEBUG", "Role fetched: '$role'")
-                _userRole.value = role
+                val profile = repository.getUserProfile()
+                android.util.Log.d("AUTH_DEBUG", "Profile fetched: '${profile?.name}' role: '${profile?.role}'")
+                _userRole.value = profile?.role
+                _userName.value = profile?.name
             } catch (e: Exception) {
-                android.util.Log.e("AUTH_DEBUG", "Error fetch role: ${e.message}")
+                android.util.Log.e("AUTH_DEBUG", "Error fetch profile: ${e.message}")
                 _userRole.value = null
+                _userName.value = null
             } finally {
                 _isRoleLoaded.value = true
             }
@@ -83,6 +91,10 @@ class AuthViewModel : ViewModel() {
     fun onKasirEmailChange(value: String) { _kasirEmail.value = value }
     fun onKasirPasswordChange(value: String) { _kasirPassword.value = value }
     fun onKasirNameChange(value: String) { _kasirName.value = value }
+
+    fun toggleDarkMode() {
+        _isDarkMode.value = !_isDarkMode.value
+    }
 
     fun login() {
         viewModelScope.launch {
