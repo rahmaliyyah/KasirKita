@@ -9,7 +9,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,7 +28,6 @@ import com.example.kasirkita.viewmodel.CustomerActionState
 import com.example.kasirkita.viewmodel.CustomerListUiState
 import com.example.kasirkita.viewmodel.CustomerViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerListScreen(
     customerViewModel: CustomerViewModel,
@@ -41,6 +39,7 @@ fun CustomerListScreen(
     val customerName by customerViewModel.customerName.collectAsStateWithLifecycle()
     val customerPhone by customerViewModel.customerPhone.collectAsStateWithLifecycle()
 
+    var searchQuery by remember { mutableStateOf("") }
     var showTambahDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -51,15 +50,50 @@ fun CustomerListScreen(
         if (actionState is CustomerActionState.Success) {
             showTambahDialog = false
             customerViewModel.resetActionState()
+            customerViewModel.resetCustomerForm()
         }
+    }
+
+    val filteredCustomers = remember(customerListState, searchQuery) {
+        if (customerListState is CustomerListUiState.Success) {
+            val customers = (customerListState as CustomerListUiState.Success).customers
+            customers.filter { 
+                it.name.contains(searchQuery, ignoreCase = true) || 
+                (it.phoneNumber?.contains(searchQuery) ?: false)
+            }
+        } else emptyList()
     }
 
     Scaffold(
         topBar = {
-            ModernTopBar(
-                title = "Pelanggan",
-                onBackClick = onBackClick
-            )
+            Column {
+                ModernTopBar(
+                    title = "Pelanggan",
+                    onBackClick = onBackClick
+                )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Cari nama atau nomor HP...", fontSize = 14.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GoldPrimary) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = GoldPrimary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+                            focusedContainerColor = MaterialTheme.colorScheme.background,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.background
+                        ),
+                        singleLine = true
+                    )
+                }
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -78,7 +112,7 @@ fun CustomerListScreen(
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            when (val state = customerListState) {
+            when (customerListState) {
                 is CustomerListUiState.Loading -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = GoldPrimary)
@@ -86,11 +120,11 @@ fun CustomerListScreen(
                 }
                 is CustomerListUiState.Error -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = state.message, color = Error)
+                        Text(text = (customerListState as CustomerListUiState.Error).message, color = Error)
                     }
                 }
                 is CustomerListUiState.Success -> {
-                    if (state.customers.isEmpty()) {
+                    if (filteredCustomers.isEmpty()) {
                         EmptyCustomerState()
                     } else {
                         LazyColumn(
@@ -98,7 +132,7 @@ fun CustomerListScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            items(state.customers) { customer ->
+                            items(filteredCustomers) { customer ->
                                 CustomerCardModern(customer) { onCustomerClick(customer) }
                             }
                         }

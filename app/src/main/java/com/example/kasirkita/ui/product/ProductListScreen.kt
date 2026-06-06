@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -18,11 +19,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.kasirkita.model.Product
 import com.example.kasirkita.ui.components.ModernTopBar
 import com.example.kasirkita.ui.theme.*
+import com.example.kasirkita.viewmodel.ProductActionState
 import com.example.kasirkita.viewmodel.ProductListUiState
 import com.example.kasirkita.viewmodel.ProductViewModel
 import java.text.NumberFormat
@@ -32,16 +35,37 @@ import java.util.*
 fun ProductListScreen(
     productViewModel: ProductViewModel,
     onProductClick: (Product) -> Unit,
-    onAddProductClick: () -> Unit,
+    userRole: String? = "owner",
+    onBackClick: (() -> Unit)? = null,
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     val listState by productViewModel.productListState.collectAsState()
+    val actionState by productViewModel.actionState.collectAsState()
+    val productName by productViewModel.productName.collectAsState()
+    val productPrice by productViewModel.productPrice.collectAsState()
+    val productStock by productViewModel.productStock.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("Semua") }
+    var showTambahDialog by remember { mutableStateOf(false) }
+
+    val isOwner = userRole == "owner"
 
     LaunchedEffect(Unit) {
-        productViewModel.loadAllProducts()
+        if (isOwner) {
+            productViewModel.loadAllProducts()
+        } else {
+            productViewModel.loadActiveProducts()
+        }
+    }
+
+    LaunchedEffect(actionState) {
+        if (actionState is ProductActionState.Success) {
+            showTambahDialog = false
+            productViewModel.resetActionState()
+            productViewModel.resetFormFields()
+            if (isOwner) productViewModel.loadAllProducts() else productViewModel.loadActiveProducts()
+        }
     }
 
     val filteredProducts = remember(listState, searchQuery, selectedFilter) {
@@ -63,7 +87,8 @@ fun ProductListScreen(
         topBar = {
             Column {
                 ModernTopBar(
-                    title = "Manajemen Stok"
+                    title = if (isOwner) "Manajemen Stok" else "Cek Stok",
+                    onBackClick = onBackClick
                 )
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -98,44 +123,51 @@ fun ProductListScreen(
                         )
 
                         // Filters
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            listOf("Semua", "Aktif", "Nonaktif").forEach { filter ->
-                                FilterChip(
-                                    selected = selectedFilter == filter,
-                                    onClick = { selectedFilter = filter },
-                                    label = { Text(filter) },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = GoldPrimary,
-                                        selectedLabelColor = Color.White,
-                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                    ),
-                                    border = FilterChipDefaults.filterChipBorder(
-                                        enabled = true,
+                        if (isOwner) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf("Semua", "Aktif", "Nonaktif").forEach { filter ->
+                                    FilterChip(
                                         selected = selectedFilter == filter,
-                                        borderColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        selectedBorderColor = GoldPrimary
+                                        onClick = { selectedFilter = filter },
+                                        label = { Text(filter) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = GoldPrimary,
+                                            selectedLabelColor = Color.White,
+                                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                        ),
+                                        border = FilterChipDefaults.filterChipBorder(
+                                            enabled = true,
+                                            selected = selectedFilter == filter,
+                                            borderColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            selectedBorderColor = GoldPrimary
+                                        )
                                     )
-                                )
+                                }
                             }
+                        } else {
+                            // Spacing for cashier search bar
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
                 }
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddProductClick,
-                containerColor = GoldPrimary,
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.padding(bottom = bottomPadding) // Adjust FAB pos
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add")
+            if (isOwner) {
+                FloatingActionButton(
+                    onClick = { showTambahDialog = true },
+                    containerColor = GoldPrimary,
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    modifier = Modifier.padding(bottom = bottomPadding) // Adjust FAB pos
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add")
+                }
             }
         }
     ) { innerPadding ->
@@ -173,6 +205,94 @@ fun ProductListScreen(
             }
         }
     }
+
+    if (showTambahDialog) {
+        TambahProductDialog(
+            name = productName,
+            price = productPrice,
+            stock = productStock,
+            actionState = actionState,
+            onNameChange = productViewModel::setProductName,
+            onPriceChange = productViewModel::setProductPrice,
+            onStockChange = productViewModel::setProductStock,
+            onConfirm = { productViewModel.createProduct(productName, productPrice, productStock) },
+            onDismiss = {
+                showTambahDialog = false
+                productViewModel.resetFormFields()
+                productViewModel.resetActionState()
+            }
+        )
+    }
+}
+
+@Composable
+fun TambahProductDialog(
+    name: String,
+    price: String,
+    stock: String,
+    actionState: ProductActionState,
+    onNameChange: (String) -> Unit,
+    onPriceChange: (String) -> Unit,
+    onStockChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Tambah Produk Baru", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = onNameChange,
+                    label = { Text("Nama Produk") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GoldPrimary)
+                )
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = onPriceChange,
+                    label = { Text("Harga") },
+                    prefix = { Text("Rp ") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GoldPrimary)
+                )
+                OutlinedTextField(
+                    value = stock,
+                    onValueChange = onStockChange,
+                    label = { Text("Stok Awal") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GoldPrimary)
+                )
+                if (actionState is ProductActionState.Error) {
+                    Text(actionState.message, color = Error, fontSize = 12.sp)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+                enabled = actionState !is ProductActionState.Loading
+            ) {
+                if (actionState is ProductActionState.Loading) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+                } else {
+                    Text("Simpan")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Batal") }
+        },
+        shape = RoundedCornerShape(24.dp)
+    )
 }
 
 @Composable

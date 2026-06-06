@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
@@ -17,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,9 +29,7 @@ import com.example.kasirkita.utils.toRupiah
 import com.example.kasirkita.viewmodel.ExpenseListUiState
 import com.example.kasirkita.viewmodel.ExpenseViewModel
 import com.example.kasirkita.viewmodel.KasViewModel
-import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseListScreen(
     expenseViewModel: ExpenseViewModel,
@@ -85,7 +81,7 @@ fun ExpenseListScreen(
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 8.dp),
+                                .padding(horizontal = 20.dp, vertical = 12.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = GoldPrimary,
@@ -103,7 +99,7 @@ fun ExpenseListScreen(
             FloatingActionButton(
                 onClick = { showFormDialog = true },
                 containerColor = GoldPrimary,
-                contentColor = Color.White,
+                contentColor = androidx.compose.ui.graphics.Color.White,
                 shape = CircleShape
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Tambah")

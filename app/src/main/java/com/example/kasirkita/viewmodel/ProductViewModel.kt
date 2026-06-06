@@ -239,6 +239,10 @@ class ProductViewModel : ViewModel() {
         _productStock.value = ""
     }
 
+    fun resetProductForm() {
+        resetFormFields()
+    }
+
     fun resetActionState() {
         _actionState.value = ProductActionState.Idle
     }

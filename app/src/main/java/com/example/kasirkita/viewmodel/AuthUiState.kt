@@ -8,22 +8,22 @@ package com.example.kasirkita.viewmodel
 sealed class AuthUiState {
 
     /*
-     * Kondisi awal, belum ada proses login/register.
+     * Kondisi awal, belum ada proses autentikasi.
      */
     object Idle : AuthUiState()
 
     /*
-     * Kondisi ketika proses login/register sedang berjalan.
+     * Kondisi ketika proses autentikasi sedang berjalan.
      */
     object Loading : AuthUiState()
 
     /*
-     * Kondisi ketika login/register berhasil.
+     * Kondisi ketika autentikasi berhasil.
      */
     object Success : AuthUiState()
 
     /*
-     * Kondisi ketika login/register gagal.
+     * Kondisi ketika autentikasi gagal.
      * message digunakan untuk menyimpan pesan error.
      */
     data class Error(val message: String) : AuthUiState()

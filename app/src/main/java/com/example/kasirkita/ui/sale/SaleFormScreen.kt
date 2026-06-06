@@ -59,6 +59,14 @@ fun SaleFormScreen(
     var isSearchFocused by remember { mutableStateOf(false) }
     var showCustomerDialog by remember { mutableStateOf(false) }
     var showKasDialog by remember { mutableStateOf(false) }
+    var showAddCustomerDialog by remember { mutableStateOf(false) }
+    
+    var customerSearchQuery by remember { mutableStateOf("") }
+    var kasSearchQuery by remember { mutableStateOf("") }
+
+    val customerName by customerViewModel.customerName.collectAsState()
+    val customerPhone by customerViewModel.customerPhone.collectAsState()
+    val customerActionState by customerViewModel.actionState.collectAsState()
 
     LaunchedEffect(Unit) {
         productViewModel.loadActiveProducts()
@@ -74,6 +82,14 @@ fun SaleFormScreen(
         }
     }
 
+    LaunchedEffect(customerActionState) {
+        if (customerActionState is CustomerActionState.Success) {
+            showAddCustomerDialog = false
+            customerViewModel.resetActionState()
+            customerViewModel.loadCustomers()
+        }
+    }
+
     Scaffold(
         topBar = {
             ModernTopBar(title = "Kasir")
@@ -86,7 +102,6 @@ fun SaleFormScreen(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // 1. Search Section
                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     OutlinedTextField(
                         value = searchQuery,
@@ -117,7 +132,6 @@ fun SaleFormScreen(
                         singleLine = true
                     )
 
-                    // 2. Search Results Overlay (Popup)
                     if (isSearchFocused && searchQuery.isNotEmpty()) {
                         Popup(
                             alignment = Alignment.TopCenter,
@@ -191,7 +205,6 @@ fun SaleFormScreen(
                     }
                 }
 
-                // 3. Cart Items (The Main Body)
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -240,20 +253,17 @@ fun SaleFormScreen(
                     }
                 }
 
-                // 4. Bottom Checkout Section
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.surface,
-                    shadowElevation = 16.dp,
-                    shape = androidx.compose.ui.graphics.RectangleShape // Squared corners
+                    shadowElevation = 16.dp
                 ) {
                     Column(
                         modifier = Modifier
                             .padding(horizontal = 20.dp)
-                            .padding(top = 16.dp, bottom = bottomPadding), // Mepet navbar
-                        verticalArrangement = Arrangement.spacedBy(12.dp) // Consistent vertical gap
+                            .padding(top = 16.dp, bottom = bottomPadding),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // 1. Selection Row (Pelanggan & Kas)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             SelectionBox(
                                 label = "Pelanggan",
@@ -277,7 +287,6 @@ fun SaleFormScreen(
                             )
                         }
 
-                        // 2. Total & Payment Row
                         Row(
                             modifier = Modifier.fillMaxWidth(), 
                             horizontalArrangement = Arrangement.spacedBy(12.dp), 
@@ -298,7 +307,7 @@ fun SaleFormScreen(
                                 value = amountPaid,
                                 onValueChange = { saleViewModel.setAmountPaid(it) },
                                 placeholder = { Text("Bayar Tunai", fontSize = 14.sp) },
-                                modifier = Modifier.weight(1f).height(52.dp), // Tighter height
+                                modifier = Modifier.weight(1f).height(52.dp),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
@@ -312,7 +321,6 @@ fun SaleFormScreen(
                             )
                         }
                         
-                        // 3. Kembalian Box (Persistent)
                         val isPaidEnough = amountPaid.isNotBlank() && (amountPaid.toDoubleOrNull() ?: 0.0) >= totalAmount
                         Surface(
                             modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -352,7 +360,6 @@ fun SaleFormScreen(
                             }
                         }
 
-                        // 4. Main Action Button
                         Button(
                             onClick = { saleViewModel.checkout() },
                             modifier = Modifier
@@ -390,13 +397,33 @@ fun SaleFormScreen(
         }
     }
 
-    // Modernized Selection Dialogs
     if (showCustomerDialog) {
         PremiumSelectionDialog(
             title = "Pilih Pelanggan",
-            onDismiss = { showCustomerDialog = false }
+            onDismiss = { 
+                showCustomerDialog = false 
+                customerSearchQuery = ""
+            },
+            searchQuery = customerSearchQuery,
+            onSearchQueryChange = { customerSearchQuery = it },
+            searchPlaceholder = "Cari nama atau nomor HP..."
         ) {
-            val customers = (customerListState as? CustomerListUiState.Success)?.customers ?: emptyList()
+            item {
+                SelectionListItem(
+                    title = "Tambah Pelanggan Baru",
+                    subtitle = "Daftarkan pelanggan di sini",
+                    icon = Icons.Default.PersonAdd,
+                    onClick = {
+                        showAddCustomerDialog = true
+                    }
+                )
+            }
+            val customers = (customerListState as? CustomerListUiState.Success)?.customers
+                ?.filter { 
+                    it.name.contains(customerSearchQuery, ignoreCase = true) || 
+                    (it.phoneNumber?.contains(customerSearchQuery) ?: false)
+                } ?: emptyList()
+                
             item {
                 SelectionListItem(
                     title = "Pelanggan Umum",
@@ -405,6 +432,7 @@ fun SaleFormScreen(
                     onClick = {
                         saleViewModel.setSelectedCustomer(null)
                         showCustomerDialog = false
+                        customerSearchQuery = ""
                     }
                 )
             }
@@ -416,6 +444,7 @@ fun SaleFormScreen(
                     onClick = {
                         saleViewModel.setSelectedCustomer(customer.id)
                         showCustomerDialog = false
+                        customerSearchQuery = ""
                     }
                 )
             }
@@ -425,9 +454,17 @@ fun SaleFormScreen(
     if (showKasDialog) {
         PremiumSelectionDialog(
             title = "Pilih Kas Pembayaran",
-            onDismiss = { showKasDialog = false }
+            onDismiss = { 
+                showKasDialog = false 
+                kasSearchQuery = ""
+            },
+            searchQuery = kasSearchQuery,
+            onSearchQueryChange = { kasSearchQuery = it },
+            searchPlaceholder = "Cari nama kas..."
         ) {
-            val registers = (kasListState as? KasListUiState.Success)?.registers?.filter { it.isActive } ?: emptyList()
+            val registers = (kasListState as? KasListUiState.Success)?.registers
+                ?.filter { it.isActive && it.name.contains(kasSearchQuery, ignoreCase = true) } ?: emptyList()
+                
             items(registers) { register ->
                 SelectionListItem(
                     title = register.name,
@@ -436,10 +473,27 @@ fun SaleFormScreen(
                     onClick = {
                         saleViewModel.setSelectedCashRegister(register.id)
                         showKasDialog = false
+                        kasSearchQuery = ""
                     }
                 )
             }
         }
+    }
+
+    if (showAddCustomerDialog) {
+        com.example.kasirkita.ui.customer.TambahCustomerDialog(
+            customerName = customerName,
+            customerPhone = customerPhone,
+            actionState = customerActionState,
+            onNameChange = customerViewModel::onCustomerNameChange,
+            onPhoneChange = customerViewModel::onCustomerPhoneChange,
+            onConfirm = { customerViewModel.createCustomer() },
+            onDismiss = {
+                showAddCustomerDialog = false
+                customerViewModel.resetCustomerForm()
+                customerViewModel.resetActionState()
+            }
+        )
     }
 }
 
@@ -455,7 +509,6 @@ fun PremiumCheckoutItem(item: CartItem, onUpdate: (String, Double) -> Unit, onRe
         }
         
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            // Smaller buttons as requested
             Surface(
                 onClick = { if (item.quantity > 1) onUpdate(item.product.id, item.quantity - 1) else onRemove(item.product.id) },
                 modifier = Modifier.size(20.dp),
@@ -517,13 +570,16 @@ fun SelectionBox(label: String, value: String, icon: ImageVector, modifier: Modi
 fun PremiumSelectionDialog(
     title: String,
     onDismiss: () -> Unit,
+    searchQuery: String = "",
+    onSearchQueryChange: ((String) -> Unit)? = null,
+    searchPlaceholder: String = "Cari...",
     content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 450.dp),
+                .heightIn(max = 550.dp),
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
@@ -536,6 +592,24 @@ fun PremiumSelectionDialog(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                
+                if (onSearchQueryChange != null) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        placeholder = { Text(searchPlaceholder, fontSize = 14.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GoldPrimary, modifier = Modifier.size(20.dp)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 8.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = GoldPrimary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+                        ),
+                        singleLine = true
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
@@ -582,17 +656,6 @@ fun SelectionListItem(
                 Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.size(20.dp))
-        }
-    }
-}
-
-@Composable
-fun EmptyStateSection(message: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.Inventory, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.surfaceVariant)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,7 +15,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,19 +23,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.kasirkita.model.Product
 import com.example.kasirkita.ui.components.ModernTopBar
 import com.example.kasirkita.ui.theme.*
-import com.example.kasirkita.utils.formatDate
 import com.example.kasirkita.utils.toRupiah
 import com.example.kasirkita.viewmodel.ProductActionState
 import com.example.kasirkita.viewmodel.ProductDetailUiState
 import com.example.kasirkita.viewmodel.ProductViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailScreen(
     productViewModel: ProductViewModel,
     productId: String,
     onBackClick: () -> Unit,
-    onEditClick: (String) -> Unit
+    isOwner: Boolean = false
 ) {
     val detailState by productViewModel.productDetailState.collectAsStateWithLifecycle()
     val actionState by productViewModel.actionState.collectAsStateWithLifecycle()
@@ -81,6 +77,7 @@ fun ProductDetailScreen(
                     val product = (detailState as ProductDetailUiState.Success).product
                     ProductDetailContent(
                         product = product,
+                        isOwner = isOwner,
                         onAdjustStock = { amount -> productViewModel.adjustStock(product.id, amount) },
                         onToggleActive = { isActive -> productViewModel.toggleProductActive(product.id, isActive) }
                     )
@@ -104,6 +101,7 @@ fun ProductDetailScreen(
 @Composable
 fun ProductDetailContent(
     product: Product,
+    isOwner: Boolean,
     onAdjustStock: (Double) -> Unit,
     onToggleActive: (Boolean) -> Unit
 ) {
@@ -112,11 +110,10 @@ fun ProductDetailContent(
         contentPadding = PaddingValues(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // 1. Elegance Header Section
         item {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 4.dp,
                 shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
             ) {
@@ -187,7 +184,6 @@ fun ProductDetailContent(
             }
         }
 
-        // 2. Premium Stock Control Card
         item {
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                 Text(
@@ -201,7 +197,7 @@ fun ProductDetailContent(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Row(
@@ -229,83 +225,86 @@ fun ProductDetailContent(
                             }
                         }
                         
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically, 
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            AdjustButton(Icons.Default.Remove, Error) { onAdjustStock(-1.0) }
-                            AdjustButton(Icons.Default.Add, Success) { onAdjustStock(1.0) }
+                        if (isOwner) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically, 
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                AdjustButton(Icons.Default.Remove, Error) { onAdjustStock(-1.0) }
+                                AdjustButton(Icons.Default.Add, Success) { onAdjustStock(1.0) }
+                            }
                         }
                     }
                 }
             }
         }
 
-        // 3. Status Switch Section
-        item {
-            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                Text(
-                    "Visibilitas Jualan",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    modifier = Modifier.padding(start = 4.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .padding(horizontal = 24.dp, vertical = 20.dp)
-                            .fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+        if (isOwner) {
+            item {
+                Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Text(
+                        "Visibilitas Jualan",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Box(
+                        Row(
                             modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(if (product.isActive) Success.copy(alpha = 0.1f) else Error.copy(alpha = 0.1f)),
-                            contentAlignment = Alignment.Center
+                                .padding(horizontal = 24.dp, vertical = 20.dp)
+                                .fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                if (product.isActive) Icons.Default.CheckCircle else Icons.Default.VisibilityOff,
-                                contentDescription = null,
-                                tint = if (product.isActive) Success else Error,
-                                modifier = Modifier.size(24.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(if (product.isActive) Success.copy(alpha = 0.1f) else Error.copy(alpha = 0.1f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    if (product.isActive) Icons.Default.CheckCircle else Icons.Default.VisibilityOff,
+                                    contentDescription = null,
+                                    tint = if (product.isActive) Success else Error,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.width(20.dp))
+                            
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (product.isActive) "Status Aktif" else "Status Nonaktif",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = if (product.isActive) "Produk muncul di menu kasir" else "Produk disembunyikan",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+                            }
+
+                            Switch(
+                                checked = product.isActive,
+                                onCheckedChange = { onToggleActive(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = Success,
+                                    uncheckedThumbColor = Color.White,
+                                    uncheckedTrackColor = Error.copy(alpha = 0.5f),
+                                    uncheckedBorderColor = Color.Transparent
+                                )
                             )
                         }
-                        
-                        Spacer(modifier = Modifier.width(20.dp))
-                        
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (product.isActive) "Status Aktif" else "Status Nonaktif",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = if (product.isActive) "Produk muncul di menu kasir" else "Produk disembunyikan",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                        }
-                        
-                        Switch(
-                            checked = product.isActive,
-                            onCheckedChange = { onToggleActive(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = Success,
-                                uncheckedThumbColor = Color.White,
-                                uncheckedTrackColor = Error.copy(alpha = 0.5f),
-                                uncheckedBorderColor = Color.Transparent
-                            )
-                        )
                     }
                 }
             }

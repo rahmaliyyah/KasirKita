@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.kasirkita.ui.theme.*
+import com.example.kasirkita.viewmodel.AuthUiState
 import com.example.kasirkita.viewmodel.AuthViewModel
 
 @Composable
@@ -31,9 +32,19 @@ fun MyProfileScreen(
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     val userName by authViewModel.userName.collectAsState()
-    val email by authViewModel.email.collectAsState()
     val userRole by authViewModel.userRole.collectAsState()
     val isDarkMode by authViewModel.isDarkMode.collectAsState()
+    val uiState by authViewModel.uiState.collectAsState()
+
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editName by remember { mutableStateOf("") }
+
+    LaunchedEffect(uiState) {
+        if (uiState is AuthUiState.Success && showEditDialog) {
+            showEditDialog = false
+            authViewModel.resetState()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -107,10 +118,22 @@ fun MyProfileScreen(
             ProfileInfoCard(
                 items = listOf(
                     ProfileInfoItem("Nama Lengkap", userName ?: "-", Icons.Default.Person),
-                    ProfileInfoItem("Email", email, Icons.Default.Email),
                     ProfileInfoItem("Role", userRole ?: "Owner", Icons.Default.Badge)
                 )
             )
+
+            if (userRole == "owner") {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                ProfileMenuButton(
+                    label = "Edit Nama Profil",
+                    icon = Icons.Default.Edit,
+                    onClick = {
+                        editName = userName ?: ""
+                        showEditDialog = true
+                    }
+                )
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -154,6 +177,54 @@ fun MyProfileScreen(
             
             Spacer(modifier = Modifier.height(bottomPadding + 20.dp))
         }
+    }
+
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showEditDialog = false
+                authViewModel.resetState()
+            },
+            title = { Text("Edit Nama Profil", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = { editName = it },
+                        label = { Text("Nama Lengkap") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = GoldPrimary)
+                    )
+                    if (uiState is AuthUiState.Error) {
+                        Text((uiState as AuthUiState.Error).message, color = Error, fontSize = 12.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { authViewModel.updateCurrentUserName(editName) },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),
+                    enabled = uiState !is AuthUiState.Loading && editName.isNotBlank()
+                ) {
+                    if (uiState is AuthUiState.Loading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Simpan")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showEditDialog = false
+                    authViewModel.resetState()
+                }) { Text("Batal") }
+            },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     }
 }
 

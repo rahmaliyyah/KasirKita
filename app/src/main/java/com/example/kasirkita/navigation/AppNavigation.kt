@@ -14,15 +14,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.kasirkita.ui.*
+import com.example.kasirkita.ui.auth.*
 import com.example.kasirkita.ui.customer.*
 import com.example.kasirkita.ui.expense.*
 import com.example.kasirkita.ui.kas.*
+import com.example.kasirkita.ui.main.MainScreen
 import com.example.kasirkita.ui.product.*
 import com.example.kasirkita.ui.profile.*
 import com.example.kasirkita.ui.sale.*
-import com.example.kasirkita.viewmodel.*
 import com.example.kasirkita.ui.theme.GoldPrimary
+import com.example.kasirkita.viewmodel.*
 
 @Composable
 fun AppNavigation(
@@ -79,8 +80,7 @@ fun AppNavigation(
                     uiState = uiState.value,
                     onEmailChange = authViewModel::onEmailChange,
                     onPasswordChange = authViewModel::onPasswordChange,
-                    onLoginClick = { authViewModel.login() },
-                    onNavigateToRegister = {}
+                    onLoginClick = { authViewModel.login() }
                 )
             }
 
@@ -186,24 +186,25 @@ fun AppNavigation(
                 )
             }
 
+            composable(Screen.ProductList.route) {
+                val productViewModel: ProductViewModel = viewModel()
+                ProductListScreen(
+                    productViewModel = productViewModel,
+                    userRole = authViewModel.userRole.collectAsStateWithLifecycle().value,
+                    onProductClick = { product ->
+                        navController.navigate(Screen.ProductDetail.createRoute(product.id))
+                    },
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
             composable(Screen.ProductDetail.route) { backStackEntry ->
                 val productId = backStackEntry.arguments?.getString("productId") ?: return@composable
                 val productViewModel: ProductViewModel = viewModel()
                 ProductDetailScreen(
                     productViewModel = productViewModel,
                     productId = productId,
-                    onBackClick = { navController.popBackStack() },
-                    onEditClick = { /* No edit mode yet */ }
-                )
-            }
-
-            composable(Screen.ProductForm.route) {
-                val productViewModel: ProductViewModel = viewModel()
-                ProductFormScreen(
-                    productViewModel = productViewModel,
-                    onSuccess = {
-                        navController.popBackStack()
-                    },
+                    isOwner = authViewModel.userRole.collectAsStateWithLifecycle().value == "owner",
                     onBackClick = { navController.popBackStack() }
                 )
             }

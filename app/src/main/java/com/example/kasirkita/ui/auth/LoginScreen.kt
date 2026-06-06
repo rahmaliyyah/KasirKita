@@ -1,4 +1,4 @@
-package com.example.kasirkita.ui
+package com.example.kasirkita.ui.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -7,8 +7,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,10 +20,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.kasirkita.ui.theme.*
-import com.example.kasirkita.ui.utils.ErrorMessageMapper
+import com.example.kasirkita.utils.ErrorMessageMapper
 import com.example.kasirkita.viewmodel.AuthUiState
-import androidx.compose.material.icons.filled.ErrorOutline
-
 
 @Composable
 fun LoginScreen(
@@ -32,8 +30,7 @@ fun LoginScreen(
     uiState: AuthUiState,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
-    onLoginClick: () -> Unit,
-    onNavigateToRegister: () -> Unit
+    onLoginClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -110,9 +107,9 @@ fun LoginScreen(
                             fontSize = 14.sp,
                             modifier = Modifier.weight(1f)
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             // Email Field

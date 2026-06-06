@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
             ModulSupabaseAuthPAMTTheme(darkTheme = isDarkMode) {
                 /*
                  * AppNavigation menjadi root utama aplikasi.
-                 * Dari sini, aplikasi bisa pindah ke Login, Register, dan Dashboard.
+                 * Mengatur alur antara Login, Dashboard Owner, dan Dashboard Kasir.
                  */
                 AppNavigation(authViewModel = authViewModel)
             }

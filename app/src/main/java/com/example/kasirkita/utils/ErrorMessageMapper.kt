@@ -1,5 +1,4 @@
-// File: ErrorMessageMapper.kt (Baru)
-package com.example.kasirkita.ui.utils
+package com.example.kasirkita.utils
 
 object ErrorMessageMapper {
     /**

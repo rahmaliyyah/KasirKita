@@ -6,9 +6,7 @@ package com.example.kasirkita.navigation
 sealed class Screen(val route: String) {
 
     object Login : Screen("login")
-    object Register : Screen("register")
     object Main : Screen("main")
-    object Dashboard : Screen("dashboard")
     object OwnerDashboard : Screen("owner_dashboard")
     object KasirDashboard : Screen("kasir_dashboard")
 
@@ -26,14 +24,12 @@ sealed class Screen(val route: String) {
 
     // Expense
     object ExpenseList : Screen("expense_list")
-    object ExpenseForm : Screen("expense_form")
     object ExpenseDetail : Screen("expense_detail/{expenseId}") {
         fun createRoute(expenseId: String) = "expense_detail/$expenseId"
     }
 
     // Product
     object ProductList : Screen("product_list")
-    object ProductForm : Screen("product_form")
     object ProductDetail : Screen("product_detail/{productId}") {
         fun createRoute(productId: String) = "product_detail/$productId"
     }

@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,30 +37,63 @@ fun KasListScreen(
     onKasClick: (CashRegister) -> Unit,
     onBackClick: () -> Unit
 ) {
-    val kasListState = kasViewModel.kasListState.collectAsStateWithLifecycle()
-    val actionState = kasViewModel.actionState.collectAsStateWithLifecycle()
-    val kasName = kasViewModel.kasName.collectAsStateWithLifecycle()
-    val kasBalance = kasViewModel.kasBalance.collectAsStateWithLifecycle()
+    val kasListState by kasViewModel.kasListState.collectAsStateWithLifecycle()
+    val actionState by kasViewModel.actionState.collectAsStateWithLifecycle()
+    val kasName by kasViewModel.kasName.collectAsStateWithLifecycle()
+    val kasBalance by kasViewModel.kasBalance.collectAsStateWithLifecycle()
 
+    var searchQuery by remember { mutableStateOf("") }
     var showTambahDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         kasViewModel.loadKasRegisters()
     }
 
-    LaunchedEffect(actionState.value) {
-        if (actionState.value is KasActionState.Success) {
+    LaunchedEffect(actionState) {
+        if (actionState is KasActionState.Success) {
             showTambahDialog = false
             kasViewModel.resetActionState()
+            kasViewModel.resetKasForm()
         }
+    }
+
+    val filteredRegisters = remember(kasListState, searchQuery) {
+        if (kasListState is KasListUiState.Success) {
+            val registers = (kasListState as KasListUiState.Success).registers
+            registers.filter { it.name.contains(searchQuery, ignoreCase = true) }
+        } else emptyList()
     }
 
     Scaffold(
         topBar = {
-            ModernTopBar(
-                title = "Kelola Kas & Saldo",
-                onBackClick = onBackClick
-            )
+            Column {
+                ModernTopBar(
+                    title = "Kelola Kas & Saldo",
+                    onBackClick = onBackClick
+                )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Cari nama kas...", fontSize = 14.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GoldPrimary) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = GoldPrimary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+                            focusedContainerColor = MaterialTheme.colorScheme.background,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.background
+                        ),
+                        singleLine = true
+                    )
+                }
+            }
         },
         floatingActionButton = {
             if (isOwner) {
@@ -75,14 +107,14 @@ fun KasListScreen(
                 }
             }
         }
-    ) { paddingValues ->
+    ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(paddingValues)
+                .padding(innerPadding)
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            when (val state = kasListState.value) {
+            when (kasListState) {
                 is KasListUiState.Loading -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = GoldPrimary)
@@ -90,19 +122,21 @@ fun KasListScreen(
                 }
                 is KasListUiState.Error -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = state.message, color = Error)
+                        Text(text = (kasListState as KasListUiState.Error).message, color = Error)
                     }
                 }
                 is KasListUiState.Success -> {
-                    if (state.registers.isEmpty()) {
-                        EmptyKasState { showTambahDialog = true }
+                    val registers = if (isOwner) filteredRegisters else filteredRegisters.filter { it.isActive }
+                    
+                    if (registers.isEmpty()) {
+                        EmptyKasState { if (isOwner) showTambahDialog = true }
                     } else {
                         LazyColumn(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            items(state.registers) { kas ->
+                            items(registers) { kas ->
                                 KasItemModern(kas) { onKasClick(kas) }
                             }
                         }
@@ -114,9 +148,9 @@ fun KasListScreen(
 
     if (showTambahDialog) {
         TambahKasDialogModern(
-            kasName = kasName.value,
-            kasBalance = kasBalance.value,
-            actionState = actionState.value,
+            kasName = kasName,
+            kasBalance = kasBalance,
+            actionState = actionState,
             onNameChange = kasViewModel::onKasNameChange,
             onBalanceChange = kasViewModel::onKasBalanceChange,
             onConfirm = { kasViewModel.createKas() },
@@ -193,7 +227,7 @@ fun EmptyKasState(onAdd: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.Outlined.AccountBalance, contentDescription = null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.surfaceVariant)
+        Icon(Icons.Default.AccountBalance, contentDescription = null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.surfaceVariant)
         Spacer(modifier = Modifier.height(16.dp))
         Text("Belum Ada Kas", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
         Spacer(modifier = Modifier.height(24.dp))

@@ -127,6 +127,19 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    fun updateCurrentUserName(newName: String) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = AuthUiState.Loading
+                repository.updateProfileName(newName)
+                _userName.value = newName
+                _uiState.value = AuthUiState.Success
+            } catch (e: Exception) {
+                _uiState.value = AuthUiState.Error(message = e.message ?: "Gagal update nama")
+            }
+        }
+    }
+
     fun logout() {
         viewModelScope.launch {
             repository.logout()

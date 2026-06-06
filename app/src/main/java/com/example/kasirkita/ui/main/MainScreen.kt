@@ -1,16 +1,16 @@
-package com.example.kasirkita.ui
+package com.example.kasirkita.ui.main
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -18,14 +18,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.kasirkita.navigation.Screen
-import com.example.kasirkita.ui.theme.GoldPrimary
-import com.example.kasirkita.ui.theme.TextSecondary
-import com.example.kasirkita.viewmodel.*
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.kasirkita.ui.dashboard.KasirDashboardScreen
+import com.example.kasirkita.ui.dashboard.OwnerDashboardScreen
 import com.example.kasirkita.ui.product.ProductListScreen
+import com.example.kasirkita.ui.profile.MyProfileScreen
 import com.example.kasirkita.ui.sale.SaleFormScreen
 import com.example.kasirkita.ui.sale.SaleListScreen
-import com.example.kasirkita.ui.profile.MyProfileScreen
+import com.example.kasirkita.ui.theme.GoldPrimary
+import com.example.kasirkita.viewmodel.*
 
 @Composable
 fun MainScreen(
@@ -34,14 +34,33 @@ fun MainScreen(
 ) {
     val navController = rememberNavController()
     val userRole by authViewModel.userRole.collectAsState()
+    val isRoleLoaded by authViewModel.isRoleLoaded.collectAsState()
 
-    val items = listOf(
-        NavigationItem("Beranda", Screen.OwnerDashboard.route, Icons.Default.Home, Icons.Outlined.Home),
-        NavigationItem("Stok", Screen.ProductList.route, Icons.Default.Inventory2, Icons.Outlined.Inventory2),
-        NavigationItem("Kasir", Screen.SaleForm.route, Icons.Default.PointOfSale, Icons.Outlined.PointOfSale),
-        NavigationItem("Transaksi", Screen.SaleList.route, Icons.Default.Assessment, Icons.Outlined.Assessment),
-        NavigationItem("Profil", "my_profile", Icons.Default.Person, Icons.Outlined.Person)
-    )
+    if (!isRoleLoaded) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = GoldPrimary)
+        }
+        return
+    }
+
+    val items = remember(userRole) {
+        if (userRole == "owner") {
+            listOf(
+                NavigationItem("Beranda", Screen.OwnerDashboard.route, Icons.Default.Home, Icons.Outlined.Home),
+                NavigationItem("Stok", Screen.ProductList.route, Icons.Default.Inventory2, Icons.Outlined.Inventory2),
+                NavigationItem("Kasir", Screen.SaleForm.route, Icons.Default.PointOfSale, Icons.Outlined.PointOfSale),
+                NavigationItem("Transaksi", Screen.SaleList.route, Icons.Default.Assessment, Icons.Outlined.Assessment),
+                NavigationItem("Profil", "my_profile", Icons.Default.Person, Icons.Outlined.Person)
+            )
+        } else {
+            listOf(
+                NavigationItem("Beranda", Screen.KasirDashboard.route, Icons.Default.Home, Icons.Outlined.Home),
+                NavigationItem("Kasir", Screen.SaleForm.route, Icons.Default.PointOfSale, Icons.Outlined.PointOfSale),
+                NavigationItem("Transaksi", Screen.SaleList.route, Icons.Default.Assessment, Icons.Outlined.Assessment),
+                NavigationItem("Profil", "my_profile", Icons.Default.Person, Icons.Outlined.Person)
+            )
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -84,11 +103,9 @@ fun MainScreen(
             }
         }
     ) { innerPadding ->
-        // NavHost mengisi seluruh layar (background bisa tembus bawah navbar)
-        // Tiap screen akan mengatur padding-nya sendiri sesuai kebutuhan
         NavHost(
             navController = navController,
-            startDestination = Screen.OwnerDashboard.route,
+            startDestination = if (userRole == "owner") Screen.OwnerDashboard.route else Screen.KasirDashboard.route,
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
         ) {
             composable(Screen.OwnerDashboard.route) {
@@ -145,14 +162,51 @@ fun MainScreen(
                 )
             }
 
+            composable(Screen.KasirDashboard.route) {
+                val userName by authViewModel.userName.collectAsState()
+                val saleViewModel: SaleViewModel = viewModel()
+                val kasViewModel: KasViewModel = viewModel()
+
+                KasirDashboardScreen(
+                    userName = userName ?: "Kasir",
+                    saleViewModel = saleViewModel,
+                    kasViewModel = kasViewModel,
+                    onStartSaleClick = {
+                        navController.navigate(Screen.SaleForm.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onManageCustomerClick = { rootNavController.navigate(Screen.CustomerList.route) },
+                    onViewProductClick = { rootNavController.navigate(Screen.ProductList.route) },
+                    onSaleClick = { saleId: String ->
+                        rootNavController.navigate(Screen.SaleDetail.createRoute(saleId))
+                    },
+                    onLihatTransaksiClick = {
+                        navController.navigate(Screen.SaleList.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    bottomPadding = innerPadding.calculateBottomPadding()
+                )
+            }
+
             composable(Screen.ProductList.route) {
                 val productViewModel: ProductViewModel = viewModel()
                 ProductListScreen(
                     productViewModel = productViewModel,
+                    userRole = userRole,
                     onProductClick = { product ->
                         rootNavController.navigate(Screen.ProductDetail.createRoute(product.id))
                     },
-                    onAddProductClick = { rootNavController.navigate(Screen.ProductForm.route) },
+                    onBackClick = null,
                     bottomPadding = innerPadding.calculateBottomPadding()
                 )
             }
@@ -168,7 +222,6 @@ fun MainScreen(
                     customerViewModel = customerViewModel,
                     kasViewModel = kasViewModel,
                     onSuccess = { _ -> 
-                        // Pindah ke tab transaksi setelah sukses
                         navController.navigate(Screen.SaleList.route) {
                             popUpTo(navController.graph.findStartDestination().id) {
                                 saveState = true
@@ -187,6 +240,7 @@ fun MainScreen(
                 SaleListScreen(
                     saleViewModel = saleViewModel,
                     expenseViewModel = expenseViewModel,
+                    userRole = userRole,
                     onSaleClick = { saleId ->
                         rootNavController.navigate(Screen.SaleDetail.createRoute(saleId))
                     },

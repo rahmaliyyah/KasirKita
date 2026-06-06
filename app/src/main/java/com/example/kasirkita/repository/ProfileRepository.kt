@@ -6,6 +6,9 @@ import com.example.kasirkita.model.ProfileUpdate
 import com.example.kasirkita.repository.UserProfile
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 class ProfileRepository {
 
@@ -59,6 +62,19 @@ class ProfileRepository {
             .update(ProfileUpdate(name = name, role = role)) {
                 filter { eq("id", id) }
             }
+    }
+
+    /*
+     * Hapus akun karyawan melalui RPC agar terhapus juga di auth.users.
+     * Hanya owner yang bisa (dicek di dalam fungsi SQL).
+     */
+    suspend fun deleteProfile(id: String) {
+        supabase.postgrest.rpc(
+            function = "delete_user_by_admin",
+            parameters = buildJsonObject {
+                put("target_user_id", id)
+            }
+        )
     }
 
     /*
