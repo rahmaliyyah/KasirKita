@@ -8,6 +8,20 @@ import com.example.kasirkita.model.ProductUpdate
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class InventoryLogInsert(
+    @SerialName("product_id") val productId: String,
+    @SerialName("quantity_change") val quantityChange: Double,
+    @SerialName("stock_before") val stockBefore: Double,
+    @SerialName("stock_after") val stockAfter: Double,
+    val type: String,
+    @SerialName("reference_id") val referenceId: String? = null,
+    val description: String? = null,
+    @SerialName("created_by") val createdBy: String
+)
 
 class ProductRepository {
 
@@ -18,11 +32,6 @@ class ProductRepository {
             ?: throw Exception("User belum login")
     }
 
-    /**
-     * Ambil semua produk yang aktif.
-     * Owner bisa lihat semua produk.
-     * Cashier hanya bisa lihat produk yang is_active=true.
-     */
     suspend fun getActiveProducts(): List<Product> {
         return supabase
             .from("products")
@@ -33,9 +42,6 @@ class ProductRepository {
             .decodeList<Product>()
     }
 
-    /**
-     * Ambil semua produk (Owner only - RLS).
-     */
     suspend fun getAllProducts(): List<Product> {
         return supabase
             .from("products")
@@ -45,9 +51,6 @@ class ProductRepository {
             .decodeList<Product>()
     }
 
-    /**
-     * Ambil satu produk berdasarkan id.
-     */
     suspend fun getProductById(id: String): Product {
         return supabase
             .from("products")
@@ -55,10 +58,6 @@ class ProductRepository {
             .decodeSingle<Product>()
     }
 
-    /**
-     * Tambah produk baru.
-     * Hanya Owner yang bisa (dijaga RLS).
-     */
     suspend fun createProduct(
         name: String,
         price: Double,
@@ -81,10 +80,6 @@ class ProductRepository {
             )
     }
 
-    /**
-     * Update produk (nama, harga, stok, status aktif).
-     * Hanya Owner yang bisa (dijaga RLS).
-     */
     suspend fun updateProduct(
         id: String,
         name: String? = null,
@@ -107,7 +102,44 @@ class ProductRepository {
     }
 
     /**
+     * Update stok produk sekaligus mencatat log penyesuaian manual.
+     */
+    suspend fun adjustStockWithLog(
+        productId: String,
+        stockBefore: Double,
+        newStock: Double,
+        amount: Double
+    ) {
+        val userId = getCurrentUserId()
+
+        // Update stok produk
+        supabase
+            .from("products")
+            .update(ProductUpdate(stock = newStock)) {
+                filter { eq("id", productId) }
+            }
+
+        // Catat log penyesuaian stok manual
+        val description = if (amount > 0) "Penambahan stok manual" else "Pengurangan stok manual"
+        supabase
+            .from("inventory_logs")
+            .insert(
+                InventoryLogInsert(
+                    productId = productId,
+                    quantityChange = amount,
+                    stockBefore = stockBefore,
+                    stockAfter = newStock,
+                    type = "adjustment",
+                    description = description,
+                    createdBy = userId
+                )
+            )
+    }
+
+    /**
      * Update status aktif/nonaktif produk.
+     * Hanya update kolom is_active, tidak mencatat ke inventory_logs
+     * karena perubahan status bukan pergerakan stok.
      */
     suspend fun toggleProductActive(id: String, isActive: Boolean) {
         supabase
@@ -117,10 +149,6 @@ class ProductRepository {
             }
     }
 
-    /**
-     * Ambil inventory logs untuk satu produk.
-     * Diurutkan dari yang terbaru.
-     */
     suspend fun getInventoryLogsByProduct(productId: String): List<InventoryLog> {
         return supabase
             .from("inventory_logs")
@@ -131,10 +159,6 @@ class ProductRepository {
             .decodeList<InventoryLog>()
     }
 
-    /**
-     * Ambil semua inventory logs.
-     * Untuk report keperluan owner.
-     */
     suspend fun getAllInventoryLogs(): List<InventoryLog> {
         return supabase
             .from("inventory_logs")

@@ -101,7 +101,6 @@ class ProductViewModel : ViewModel() {
         priceStr: String,
         stockStr: String
     ) {
-        // Validasi
         if (name.isBlank()) {
             _actionState.value = ProductActionState.Error("Nama produk tidak boleh kosong")
             return
@@ -188,8 +187,8 @@ class ProductViewModel : ViewModel() {
                 _actionState.value = ProductActionState.Loading
                 productRepository.toggleProductActive(productId, isActive)
                 _actionState.value = ProductActionState.Success
-                loadProductDetail(productId) // Refresh detail
-                loadAllProducts() // Refresh list
+                loadProductDetail(productId)
+                loadAllProducts()
             } catch (e: Exception) {
                 _actionState.value = ProductActionState.Error(e.message ?: "Gagal mengubah status produk")
             }
@@ -197,7 +196,7 @@ class ProductViewModel : ViewModel() {
     }
 
     /**
-     * Tambah/Kurangi stok secara cepat.
+     * Tambah/Kurangi stok secara manual dengan mencatat log.
      */
     fun adjustStock(productId: String, amount: Double) {
         val currentProduct = (_productDetailState.value as? ProductDetailUiState.Success)?.product ?: return
@@ -210,7 +209,12 @@ class ProductViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 _actionState.value = ProductActionState.Loading
-                productRepository.updateProduct(productId, null, null, newStock)
+                productRepository.adjustStockWithLog(
+                    productId = productId,
+                    stockBefore = currentProduct.stock,
+                    newStock = newStock,
+                    amount = amount
+                )
                 _actionState.value = ProductActionState.Success
                 loadProductDetail(productId)
                 loadAllProducts()
@@ -221,17 +225,9 @@ class ProductViewModel : ViewModel() {
     }
 
     // Form setters
-    fun setProductName(name: String) {
-        _productName.value = name
-    }
-
-    fun setProductPrice(price: String) {
-        _productPrice.value = price
-    }
-
-    fun setProductStock(stock: String) {
-        _productStock.value = stock
-    }
+    fun setProductName(name: String) { _productName.value = name }
+    fun setProductPrice(price: String) { _productPrice.value = price }
+    fun setProductStock(stock: String) { _productStock.value = stock }
 
     fun resetFormFields() {
         _productName.value = ""
@@ -239,11 +235,7 @@ class ProductViewModel : ViewModel() {
         _productStock.value = ""
     }
 
-    fun resetProductForm() {
-        resetFormFields()
-    }
+    fun resetProductForm() { resetFormFields() }
 
-    fun resetActionState() {
-        _actionState.value = ProductActionState.Idle
-    }
+    fun resetActionState() { _actionState.value = ProductActionState.Idle }
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.kasirkita.model.InventoryLog
 import com.example.kasirkita.model.Product
 import com.example.kasirkita.ui.components.ModernTopBar
 import com.example.kasirkita.ui.theme.*
@@ -70,16 +71,24 @@ fun ProductDetailScreen(
                 }
                 is ProductDetailUiState.Error -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = (detailState as ProductDetailUiState.Error).message, color = Error)
+                        Text(
+                            text = (detailState as ProductDetailUiState.Error).message,
+                            color = Error
+                        )
                     }
                 }
                 is ProductDetailUiState.Success -> {
-                    val product = (detailState as ProductDetailUiState.Success).product
+                    val successState = detailState as ProductDetailUiState.Success
                     ProductDetailContent(
-                        product = product,
+                        product = successState.product,
                         isOwner = isOwner,
-                        onAdjustStock = { amount -> productViewModel.adjustStock(product.id, amount) },
-                        onToggleActive = { isActive -> productViewModel.toggleProductActive(product.id, isActive) }
+                        inventoryLogs = successState.inventoryLogs,
+                        onAdjustStock = { amount ->
+                            productViewModel.adjustStock(successState.product.id, amount)
+                        },
+                        onToggleActive = { isActive ->
+                            productViewModel.toggleProductActive(successState.product.id, isActive)
+                        }
                     )
                 }
             }
@@ -102,6 +111,7 @@ fun ProductDetailScreen(
 fun ProductDetailContent(
     product: Product,
     isOwner: Boolean,
+    inventoryLogs: List<InventoryLog>,
     onAdjustStock: (Double) -> Unit,
     onToggleActive: (Boolean) -> Unit
 ) {
@@ -110,6 +120,7 @@ fun ProductDetailContent(
         contentPadding = PaddingValues(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
+        // 1. Header
         item {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -134,15 +145,15 @@ fun ProductDetailContent(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Inventory2, 
-                            contentDescription = null, 
-                            tint = Color.White, 
+                            imageVector = Icons.Default.Inventory2,
+                            contentDescription = null,
+                            tint = Color.White,
                             modifier = Modifier.size(56.dp)
                         )
                     }
-                    
+
                     Spacer(modifier = Modifier.height(24.dp))
-                    
+
                     Text(
                         text = product.name,
                         style = MaterialTheme.typography.headlineMedium.copy(
@@ -151,9 +162,9 @@ fun ProductDetailContent(
                         ),
                         color = TextPrimary
                     )
-                    
+
                     Spacer(modifier = Modifier.height(4.dp))
-                    
+
                     Text(
                         text = product.price.toRupiah(),
                         style = MaterialTheme.typography.titleLarge.copy(
@@ -168,7 +179,9 @@ fun ProductDetailContent(
                         Surface(
                             color = Error.copy(alpha = 0.08f),
                             shape = RoundedCornerShape(12.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Error.copy(alpha = 0.2f))
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp, Error.copy(alpha = 0.2f)
+                            )
                         ) {
                             Text(
                                 "PRODUK INI DINONAKTIFKAN",
@@ -184,6 +197,7 @@ fun ProductDetailContent(
             }
         }
 
+        // 2. Manajemen Inventaris
         item {
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                 Text(
@@ -208,7 +222,11 @@ fun ProductDetailContent(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text("Stok Tersedia", style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+                            Text(
+                                "Stok Tersedia",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = TextSecondary
+                            )
                             Row(verticalAlignment = Alignment.Bottom) {
                                 Text(
                                     text = product.stock.toInt().toString(),
@@ -224,10 +242,10 @@ fun ProductDetailContent(
                                 )
                             }
                         }
-                        
+
                         if (isOwner) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically, 
+                                verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 AdjustButton(Icons.Default.Remove, Error) { onAdjustStock(-1.0) }
@@ -239,6 +257,7 @@ fun ProductDetailContent(
             }
         }
 
+        // 3. Visibilitas (owner only)
         if (isOwner) {
             item {
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
@@ -266,19 +285,23 @@ fun ProductDetailContent(
                                 modifier = Modifier
                                     .size(48.dp)
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(if (product.isActive) Success.copy(alpha = 0.1f) else Error.copy(alpha = 0.1f)),
+                                    .background(
+                                        if (product.isActive) Success.copy(alpha = 0.1f)
+                                        else Error.copy(alpha = 0.1f)
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    if (product.isActive) Icons.Default.CheckCircle else Icons.Default.VisibilityOff,
+                                    if (product.isActive) Icons.Default.CheckCircle
+                                    else Icons.Default.VisibilityOff,
                                     contentDescription = null,
                                     tint = if (product.isActive) Success else Error,
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
-                            
+
                             Spacer(modifier = Modifier.width(20.dp))
-                            
+
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = if (product.isActive) "Status Aktif" else "Status Nonaktif",
@@ -287,7 +310,8 @@ fun ProductDetailContent(
                                     color = TextPrimary
                                 )
                                 Text(
-                                    text = if (product.isActive) "Produk muncul di menu kasir" else "Produk disembunyikan",
+                                    text = if (product.isActive) "Produk muncul di menu kasir"
+                                    else "Produk disembunyikan",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextSecondary
                                 )
@@ -309,6 +333,133 @@ fun ProductDetailContent(
                 }
             }
         }
+
+        // 4. Riwayat Pergerakan Stok
+        item {
+            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                Text(
+                    "Riwayat Pergerakan Stok",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    if (inventoryLogs.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Icons.Default.History,
+                                    contentDescription = null,
+                                    tint = TextSecondary.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(40.dp)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "Belum ada riwayat pergerakan stok",
+                                    color = TextSecondary,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    } else {
+                        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                            inventoryLogs.forEachIndexed { index, log ->
+                                InventoryLogItem(log = log)
+                                if (index < inventoryLogs.size - 1) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 20.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InventoryLogItem(log: InventoryLog) {
+    val isPositive = log.quantityChange > 0
+
+    val typeLabel = when (log.type) {
+        "sale", "sold" -> "Penjualan"
+        "adjustment", "manual" -> "Penyesuaian Manual"
+        "created" -> "Produk Dibuat"
+        else -> log.type
+    }
+
+    val changeColor = if (isPositive) Success else Error
+
+    val iconVector = when (log.type) {
+        "sale", "sold" -> Icons.Default.ShoppingCart
+        else -> if (isPositive) Icons.Default.Add else Icons.Default.Remove
+    }
+
+    val changePrefix = if (isPositive) "+" else ""
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(changeColor.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = iconVector,
+                contentDescription = null,
+                tint = changeColor,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(14.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = typeLabel,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Text(
+                text = "${log.stockBefore.toInt()} → ${log.stockAfter.toInt()} pcs",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+            Text(
+                text = log.createdAt.take(10),
+                style = MaterialTheme.typography.labelSmall,
+                color = TextSecondary.copy(alpha = 0.7f)
+            )
+        }
+
+        Text(
+            text = "$changePrefix${log.quantityChange.toInt()} pcs",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = changeColor
+        )
     }
 }
 
